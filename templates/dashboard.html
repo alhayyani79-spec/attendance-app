@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard</title>
+
+    <style>
+        body {
+            font-family: Arial;
+            background: #f2f2f2;
+            padding: 30px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: auto;
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0px 0px 10px rgba(0,0,0,0.1);
+        }
+
+        .title {
+            font-size: 35px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 20px;
+            color: #009639;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+        }
+
+        th {
+            background: #009639;
+            color: white;
+        }
+
+        button {
+            padding: 6px 12px;
+            background: #009639;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #007a2f;
+        }
+
+        .msg {
+            background: #d4edda;
+            color: #155724;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 6px;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1 class="title">Family Attendance List</h1>
+
+    {% if msg %}
+        <div class="msg">{{ msg }}</div>
+    {% endif %}
+
+    <table>
+        <tr>
+            <th>Activity</th>
+            <th>Join</th>
+            <th>Attendees</th>
+        </tr>
+
+        {% for key, name in activities.items() %}
+        <tr>
+            <td>{{ name }}</td>
+
+            <td>
+                <a href="/join/{{ key }}">
+                    <button>Join</button>
+                </a>
+            </td>
+
+            <td>
+                {% if attendance[key] %}
+                    {{ attendance[key]|join(", ") }}
+                {% else %}
+                    None
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+
+    </table>
+
+    <br>
+
+    <a href="/logout">
+        <button>Logout</button>
+    </a>
+
+</div>
+
+</body>
+</html>
