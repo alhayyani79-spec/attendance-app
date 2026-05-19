@@ -2,7 +2,7 @@
 <html>
 <head>
 
-    <title>Family Attendance List</title>
+    <title>Dashboard</title>
 
     <meta http-equiv="refresh" content="5">
 
@@ -12,73 +12,43 @@
             margin:0;
             font-family:Arial;
             background:#f4f7f5;
-            color:#222;
-        }
-
-        .info-line{
-            display:flex;
-            align-items:center;
-            gap:8px;
-            margin-bottom:10px;
-            color:#333;
-            font-size:15px;
         }
 
         .topbar{
             background:white;
-            padding:25px 40px;
+            padding:20px 40px;
             display:flex;
             justify-content:space-between;
             align-items:center;
-            box-shadow:0 2px 10px rgba(0,0,0,0.08);
         }
 
-        .title h1{
-            margin:0;
+        .topbar h1{
             color:#009639;
-            font-size:38px;
-        }
-
-        .title p{
-            margin-top:5px;
-            color:gray;
+            margin:0;
         }
 
         .logout button{
             background:#009639;
             color:white;
             border:none;
-            padding:12px 20px;
+            padding:10px 15px;
             border-radius:10px;
             cursor:pointer;
         }
 
-        .stats{
-            display:grid;
-            grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-            gap:20px;
-            padding:30px;
+        .msg{
+            margin:20px;
+            padding:15px;
+            background:#dcfce7;
+            color:#166534;
+            border-radius:10px;
         }
 
-        .card{
-            background:white;
-            padding:25px;
-            border-radius:15px;
-            box-shadow:0 2px 10px rgba(0,0,0,0.08);
-        }
-
-        .card h2{
-            margin:0;
-            color:#009639;
-            font-size:35px;
-        }
-
-        .table-box{
-            margin:0 30px 30px 30px;
+        .container{
+            margin:20px;
             background:white;
             border-radius:15px;
             overflow:hidden;
-            box-shadow:0 2px 10px rgba(0,0,0,0.08);
         }
 
         table{
@@ -89,73 +59,39 @@
         th{
             background:#009639;
             color:white;
-            padding:18px;
+            padding:15px;
             text-align:left;
         }
 
         td{
-            padding:20px;
+            padding:15px;
             border-bottom:1px solid #eee;
-            vertical-align:top;
         }
 
-        .activity-title{
-            font-size:20px;
+        .title{
             font-weight:bold;
+            font-size:18px;
         }
 
         .arabic{
             color:#009639;
-            margin:6px 0;
         }
 
-        .description{
-            color:#555;
-            line-height:1.5;
-        }
-
-        .joined{
+        .join{
             background:#16a34a;
             color:white;
-            padding:7px 14px;
+            padding:8px 12px;
             border-radius:8px;
-            display:inline-block;
-            font-size:13px;
+            text-decoration:none;
         }
 
-        .notjoined{
-            background:#9ca3af;
-            color:white;
-            padding:7px 14px;
-            border-radius:8px;
-            display:inline-block;
-            font-size:13px;
-        }
-
-        .join-btn{
-            background:#16a34a;
-            color:white;
-            border:none;
-            padding:10px 18px;
-            border-radius:10px;
-            cursor:pointer;
-        }
-
-        .cancel-btn{
+        .cancel{
             background:white;
-            color:#dc2626;
-            border:1px solid #dc2626;
-            padding:10px 18px;
-            border-radius:10px;
-            cursor:pointer;
-        }
-
-        .msg{
-            margin:20px 30px;
-            background:#dcfce7;
-            color:#166534;
-            padding:15px;
-            border-radius:10px;
+            border:1px solid red;
+            color:red;
+            padding:8px 12px;
+            border-radius:8px;
+            text-decoration:none;
         }
 
     </style>
@@ -166,61 +102,25 @@
 
 <div class="topbar">
 
-    <div class="title">
-        <h1>Family Attendance List</h1>
-        <p>View family activities and attendance</p>
-    </div>
+    <h1>Family Attendance List</h1>
 
     <div class="logout">
-        <a href="/logout">
-            <button>Logout</button>
-        </a>
+        <a href="/logout"><button>Logout</button></a>
     </div>
 
 </div>
 
 {% if msg %}
-<div class="msg">
-    {{ msg }}
-</div>
+<div class="msg">{{ msg }}</div>
 {% endif %}
 
-<div class="stats">
-
-    <div class="card">
-        <h2>{{ activities|length }}</h2>
-        <p>Total Activities</p>
-    </div>
-
-    <div class="card">
-
-        <h2>
-
-            {% set count = namespace(value=0) %}
-
-            {% for key, users in attendance.items() %}
-                {% if user in users %}
-                    {% set count.value = count.value + 1 %}
-                {% endif %}
-            {% endfor %}
-
-            {{ count.value }}
-
-        </h2>
-
-        <p>Joined Activities</p>
-
-    </div>
-
-</div>
-
-<div class="table-box">
+<div class="container">
 
 <table>
 
 <tr>
     <th>Activity</th>
-    <th>Date & Time</th>
+    <th>Date / Time</th>
     <th>Location</th>
     <th>Capacity</th>
     <th>Status</th>
@@ -231,72 +131,51 @@
 
 <tr>
 
-<td width="35%">
+<td>
 
-    <div class="activity-title">
+    <div class="title">
+
+        {% if key == "national_day" %}
+            🇦🇪
+        {% elif key == "eid" %}
+            🌙
+        {% elif key == "flag_day" %}
+            🇦🇪
+        {% elif key == "memorial" %}
+            🕌
+        {% endif %}
+
         {{ activity.title }}
+
     </div>
 
     <div class="arabic">
         {{ activity.arabic }}
     </div>
 
-    <div class="description">
-        {{ activity.description }}
-    </div>
+    <div>{{ activity.description }}</div>
 
 </td>
 
 <td>
-
-    <div class="info-line">
-        📅 {{ activity.date }}
-    </div>
-
-    <div class="info-line">
-        ⏰ {{ activity.time }}
-    </div>
-
+    {{ activity.date }}<br>
+    {{ activity.time }}
 </td>
 
 <td>
-
-    <div class="info-line">
-        🌙 {{ activity.location }}
-    </div>
-
+    {{ activity.location }}
 </td>
 
 <td>
-
-    <div class="info-line">
-        👥 {{ attendance[key]|length }} / {{ activity.capacity }}
-    </div>
-
-    <br>
-
-    {% set remaining = activity.capacity - attendance[key]|length %}
-
-    <div class="info-line">
-        🪑 {{ remaining }} seats available
-    </div>
-
+    {{ attendance[key]|length }} / {{ activity.capacity }}
 </td>
 
 <td>
 
 {% if user in attendance[key] %}
-
-    <div class="joined">
-        Joined
-    </div>
-
+    Joined
 {% else %}
-
-    <div class="notjoined">
-        Not Joined
-    </div>
-
+    Not Joined
 {% endif %}
 
 </td>
@@ -304,21 +183,9 @@
 <td>
 
 {% if user in attendance[key] %}
-
-    <a href="/cancel/{{ key }}">
-        <button class="cancel-btn">
-            Cancel
-        </button>
-    </a>
-
+    <a class="cancel" href="/cancel/{{ key }}">Cancel</a>
 {% else %}
-
-    <a href="/join/{{ key }}">
-        <button class="join-btn">
-            Join
-        </button>
-    </a>
-
+    <a class="join" href="/join/{{ key }}">Join</a>
 {% endif %}
 
 </td>
