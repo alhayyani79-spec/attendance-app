@@ -94,9 +94,7 @@ def home():
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
-
     if request.method == "POST":
-
         username = request.form.get("username")
         password = request.form.get("password")
 
@@ -111,7 +109,6 @@ def login():
 
 @app.route("/dashboard")
 def dashboard():
-
     if "user" not in session:
         return redirect("/login")
 
@@ -128,7 +125,6 @@ def dashboard():
 
 @app.route("/join/<activity_id>")
 def join(activity_id):
-
     if "user" not in session:
         return redirect("/login")
 
@@ -145,7 +141,6 @@ def join(activity_id):
 
 @app.route("/cancel/<activity_id>")
 def cancel(activity_id):
-
     if "user" not in session:
         return redirect("/login")
 

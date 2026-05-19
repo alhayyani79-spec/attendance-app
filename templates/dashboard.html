@@ -71,10 +71,21 @@
         .title{
             font-weight:bold;
             font-size:18px;
+            display:flex;
+            align-items:center;
+            gap:8px;
         }
 
         .arabic{
             color:#009639;
+        }
+
+        .info-line{
+            display:flex;
+            align-items:center;
+            gap:8px;
+            margin-top:6px;
+            font-size:14px;
         }
 
         .join{
@@ -101,13 +112,11 @@
 <body>
 
 <div class="topbar">
-
     <h1>Family Attendance List</h1>
 
     <div class="logout">
         <a href="/logout"><button>Logout</button></a>
     </div>
-
 </div>
 
 {% if msg %}
@@ -158,8 +167,10 @@
 </td>
 
 <td>
-    {{ activity.date }}<br>
-    {{ activity.time }}
+
+    <div class="info-line">📅 {{ activity.date }}</div>
+    <div class="info-line">⏰ {{ activity.time }}</div>
+
 </td>
 
 <td>
@@ -167,7 +178,17 @@
 </td>
 
 <td>
-    {{ attendance[key]|length }} / {{ activity.capacity }}
+
+    <div class="info-line">
+        👥 {{ attendance[key]|length }} / {{ activity.capacity }}
+    </div>
+
+    {% set remaining = activity.capacity - attendance[key]|length %}
+
+    <div class="info-line">
+        🪑 {{ remaining }} seats left
+    </div>
+
 </td>
 
 <td>
