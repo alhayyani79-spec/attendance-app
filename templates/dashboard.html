@@ -15,6 +15,15 @@
             color:#222;
         }
 
+        .info-line{
+            display:flex;
+            align-items:center;
+            gap:8px;
+            margin-bottom:10px;
+            color:#333;
+            font-size:15px;
+        }
+
         .topbar{
             background:white;
             padding:25px 40px;
@@ -239,24 +248,38 @@
 </td>
 
 <td>
-    {{ activity.date }}
-    <br><br>
-    {{ activity.time }}
+
+    <div class="info-line">
+        📅 {{ activity.date }}
+    </div>
+
+    <div class="info-line">
+        ⏰ {{ activity.time }}
+    </div>
+
 </td>
 
 <td>
-    {{ activity.location }}
+
+    <div class="info-line">
+        🌙 {{ activity.location }}
+    </div>
+
 </td>
 
 <td>
 
-    {{ attendance[key]|length }} / {{ activity.capacity }}
+    <div class="info-line">
+        👥 {{ attendance[key]|length }} / {{ activity.capacity }}
+    </div>
 
-    <br><br>
+    <br>
 
     {% set remaining = activity.capacity - attendance[key]|length %}
 
-    {{ remaining }} seats available
+    <div class="info-line">
+        🪑 {{ remaining }} seats available
+    </div>
 
 </td>
 
