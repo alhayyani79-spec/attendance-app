@@ -19,7 +19,7 @@ activities = {
         "title": "UAE National Day",
         "arabic": "اليوم الوطني الإماراتي",
         "description": "Family celebration with performances and food.",
-        "date": "2 Dec 2024",
+        "date": "2 Dec 2026",
         "time": "5:00 PM - 8:00 PM",
         "location": "Main School Hall",
         "capacity": 30
@@ -39,7 +39,7 @@ activities = {
         "title": "UAE Flag Day",
         "arabic": "يوم العلم",
         "description": "Flag ceremony and speeches.",
-        "date": "3 Nov 2024",
+        "date": "3 Nov 2026",
         "time": "10:00 AM - 12:00 PM",
         "location": "School Yard",
         "capacity": 50
@@ -49,7 +49,7 @@ activities = {
         "title": "Commemoration Day",
         "arabic": "يوم الشهيد",
         "description": "Honoring UAE heroes.",
-        "date": "30 Nov 2024",
+        "date": "30 Nov 2026",
         "time": "9:00 AM - 11:00 AM",
         "location": "Assembly Area",
         "capacity": 35
