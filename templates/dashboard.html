@@ -14,38 +14,79 @@
             background:#f4f7f5;
         }
 
-        .topbar{
+        /* HEADER */
+        .header{
             background:white;
-            padding:20px 40px;
-            display:flex;
-            justify-content:space-between;
-            align-items:center;
+            padding:25px 40px;
+            position:relative;
+            text-align:center;
+            box-shadow:0 2px 10px rgba(0,0,0,0.08);
         }
 
-        .topbar h1{
-            color:#009639;
+        .header h1{
             margin:0;
+            color:#009639;
+            font-size:34px;
+        }
+
+        .header p{
+            margin-top:8px;
+            color:gray;
+            font-size:14px;
+        }
+
+        /* WELCOME TOP RIGHT */
+        .welcome{
+            position:absolute;
+            right:40px;
+            top:20px;
+            text-align:right;
+        }
+
+        .welcome-text{
+            font-weight:bold;
+            color:#111;
         }
 
         .logout button{
+            margin-top:8px;
             background:#009639;
             color:white;
             border:none;
-            padding:10px 15px;
+            padding:8px 14px;
             border-radius:10px;
             cursor:pointer;
         }
 
-        .msg{
-            margin:20px;
-            padding:15px;
-            background:#dcfce7;
-            color:#166534;
-            border-radius:10px;
+        /* STATS */
+        .stats{
+            display:grid;
+            grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+            gap:15px;
+            padding:20px 30px;
         }
 
+        .card{
+            background:white;
+            padding:20px;
+            border-radius:15px;
+            box-shadow:0 2px 10px rgba(0,0,0,0.08);
+        }
+
+        .card h2{
+            margin:0;
+            color:#009639;
+            font-size:28px;
+        }
+
+        .card p{
+            margin:5px 0 0 0;
+            color:gray;
+        }
+
+        /* TABLE */
         .container{
-            margin:20px;
+            margin:0 30px 30px 30px;
             background:white;
             border-radius:15px;
             overflow:hidden;
@@ -88,6 +129,32 @@
             font-size:14px;
         }
 
+        /* INFO SECTION */
+        .info-box{
+            margin:20px 30px;
+            background:white;
+            padding:20px;
+            border-radius:15px;
+            box-shadow:0 2px 10px rgba(0,0,0,0.08);
+        }
+
+        .info-title{
+            font-weight:bold;
+            display:flex;
+            align-items:center;
+            gap:8px;
+            font-size:16px;
+            margin-bottom:10px;
+        }
+
+        .msg{
+            margin:20px 30px;
+            padding:15px;
+            background:#dcfce7;
+            color:#166534;
+            border-radius:10px;
+        }
+
         .join{
             background:#16a34a;
             color:white;
@@ -111,18 +178,85 @@
 
 <body>
 
-<div class="topbar">
-    <h1>Family Attendance List</h1>
+<!-- HEADER -->
+<div class="header">
 
-    <div class="logout">
-        <a href="/logout"><button>Logout</button></a>
+    <h1>Family Attendance List</h1>
+    <p>Track and manage all family events and attendance easily</p>
+
+    <!-- WELCOME -->
+    <div class="welcome">
+        <div class="welcome-text">
+            Welcome, {{ user }}
+        </div>
+
+        <div class="logout">
+            <a href="/logout"><button>Logout</button></a>
+        </div>
     </div>
+
+</div>
+
+<!-- STATS -->
+<div class="stats">
+
+    <div class="card">
+        <h2>{{ activities|length }}</h2>
+        <p>Total Activities</p>
+    </div>
+
+    <div class="card">
+
+        <h2>
+            {% set count = namespace(value=0) %}
+            {% for key, users in attendance.items() %}
+                {% if user in users %}
+                    {% set count.value = count.value + 1 %}
+                {% endif %}
+            {% endfor %}
+            {{ count.value }}
+        </h2>
+
+        <p>Joined Activities</p>
+    </div>
+
+    <div class="card">
+
+        <h2>
+            {% set reg = namespace(value=0) %}
+            {% for key, users in attendance.items() %}
+                {% set reg.value = reg.value + users|length %}
+            {% endfor %}
+            {{ reg.value }}
+        </h2>
+
+        <p>Total Registrations</p>
+    </div>
+
+    <div class="card">
+
+        <h2>
+            {% set seats = namespace(value=0) %}
+            {% set total = namespace(value=0) %}
+
+            {% for key, activity in activities.items() %}
+                {% set total.value = total.value + activity.capacity %}
+                {% set seats.value = seats.value + attendance[key]|length %}
+            {% endfor %}
+
+            {{ seats.value }} / {{ total.value }}
+        </h2>
+
+        <p>Total Seats Booked</p>
+    </div>
+
 </div>
 
 {% if msg %}
 <div class="msg">{{ msg }}</div>
 {% endif %}
 
+<!-- TABLE -->
 <div class="container">
 
 <table>
@@ -167,10 +301,8 @@
 </td>
 
 <td>
-
     <div class="info-line">📅 {{ activity.date }}</div>
     <div class="info-line">⏰ {{ activity.time }}</div>
-
 </td>
 
 <td>
@@ -216,6 +348,21 @@
 {% endfor %}
 
 </table>
+
+</div>
+
+<!-- INFO BOX -->
+<div class="info-box">
+
+    <div class="info-title">
+        ℹ️ Information
+    </div>
+
+    <div>
+        This dashboard allows family members to join and manage attendance for different UAE-related events.  
+        Click <b>Join</b> to register for an activity and <b>Cancel</b> if you cannot attend.  
+        Make sure to check available seats before joining.
+    </div>
 
 </div>
 
