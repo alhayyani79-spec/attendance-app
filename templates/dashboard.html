@@ -35,7 +35,7 @@
             font-size:14px;
         }
 
-        /* WELCOME TOP RIGHT */
+        /* WELCOME */
         .welcome{
             position:absolute;
             right:40px;
@@ -129,7 +129,7 @@
             font-size:14px;
         }
 
-        /* INFO SECTION */
+        /* INFO BOX */
         .info-box{
             margin:20px 30px;
             background:white;
@@ -145,6 +145,19 @@
             gap:8px;
             font-size:16px;
             margin-bottom:10px;
+        }
+
+        .info-box button{
+            background:#009639;
+            color:white;
+            border:none;
+            padding:10px 15px;
+            border-radius:10px;
+            cursor:pointer;
+        }
+
+        .info-box button:hover{
+            opacity:0.9;
         }
 
         .msg{
@@ -182,20 +195,60 @@
 <div class="header">
 
     <h1>Family Attendance List</h1>
-    <p>Track and manage all family events and attendance easily</p>
+
+    <p>
+        Track and manage all family events and attendance easily
+    </p>
 
     <!-- WELCOME -->
     <div class="welcome">
+
         <div class="welcome-text">
             Welcome, {{ user }}
         </div>
 
         <div class="logout">
-            <a href="/logout"><button>Logout</button></a>
+            <a href="/logout">
+                <button>Logout</button>
+            </a>
         </div>
+
     </div>
 
 </div>
+
+<!-- ADMIN PANEL -->
+{% if user == "admin" %}
+
+<div class="info-box">
+
+    <div class="info-title">
+        🛠️ Admin Control Panel
+    </div>
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:15px;">
+
+        <button onclick="location.href='/add_account'">
+            Add Account
+        </button>
+
+        <button onclick="location.href='/remove_account'">
+            Remove Account
+        </button>
+
+        <button onclick="location.href='/add_activity'">
+            Add Activity
+        </button>
+
+        <button onclick="location.href='/remove_activity'">
+            Remove Activity
+        </button>
+
+    </div>
+
+</div>
+
+{% endif %}
 
 <!-- STATS -->
 <div class="stats">
@@ -208,34 +261,45 @@
     <div class="card">
 
         <h2>
+
             {% set count = namespace(value=0) %}
+
             {% for key, users in attendance.items() %}
                 {% if user in users %}
                     {% set count.value = count.value + 1 %}
                 {% endif %}
             {% endfor %}
+
             {{ count.value }}
+
         </h2>
 
         <p>Joined Activities</p>
+
     </div>
 
     <div class="card">
 
         <h2>
+
             {% set reg = namespace(value=0) %}
+
             {% for key, users in attendance.items() %}
                 {% set reg.value = reg.value + users|length %}
             {% endfor %}
+
             {{ reg.value }}
+
         </h2>
 
         <p>Total Registrations</p>
+
     </div>
 
     <div class="card">
 
         <h2>
+
             {% set seats = namespace(value=0) %}
             {% set total = namespace(value=0) %}
 
@@ -245,15 +309,19 @@
             {% endfor %}
 
             {{ seats.value }} / {{ total.value }}
+
         </h2>
 
         <p>Total Seats Booked</p>
+
     </div>
 
 </div>
 
 {% if msg %}
-<div class="msg">{{ msg }}</div>
+<div class="msg">
+    {{ msg }}
+</div>
 {% endif %}
 
 <!-- TABLE -->
@@ -296,13 +364,22 @@
         {{ activity.arabic }}
     </div>
 
-    <div>{{ activity.description }}</div>
+    <div>
+        {{ activity.description }}
+    </div>
 
 </td>
 
 <td>
-    <div class="info-line">📅 {{ activity.date }}</div>
-    <div class="info-line">⏰ {{ activity.time }}</div>
+
+    <div class="info-line">
+        📅 {{ activity.date }}
+    </div>
+
+    <div class="info-line">
+        ⏰ {{ activity.time }}
+    </div>
+
 </td>
 
 <td>
@@ -335,10 +412,26 @@
 
 <td>
 
-{% if user in attendance[key] %}
-    <a class="cancel" href="/cancel/{{ key }}">Cancel</a>
+{% if user == "admin" %}
+
+    Admin Account
+
 {% else %}
-    <a class="join" href="/join/{{ key }}">Join</a>
+
+    {% if user in attendance[key] %}
+
+        <a class="cancel" href="/cancel/{{ key }}">
+            Cancel
+        </a>
+
+    {% else %}
+
+        <a class="join" href="/join/{{ key }}">
+            Join
+        </a>
+
+    {% endif %}
+
 {% endif %}
 
 </td>
@@ -351,7 +444,7 @@
 
 </div>
 
-<!-- INFO BOX -->
+<!-- INFO -->
 <div class="info-box">
 
     <div class="info-title">
@@ -359,9 +452,20 @@
     </div>
 
     <div>
-        This dashboard allows family members to join and manage attendance for different UAE-related events.  
-        Click <b>Join</b> to register for an activity and <b>Cancel</b> if you cannot attend.  
-        Make sure to check available seats before joining.
+
+        This dashboard allows family members to join and manage attendance
+        for UAE-related activities and gatherings.
+
+        <br><br>
+
+        Click <b>Join</b> to register for an activity and
+        <b>Cancel</b> if you cannot attend anymore.
+
+        <br><br>
+
+        Admin accounts can manage users and activities through the
+        admin control panel.
+
     </div>
 
 </div>
