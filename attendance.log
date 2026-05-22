@@ -1,0 +1,10 @@
+2026-05-22 13:32:14,356 - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5055
+ * Running on http://192.168.0.190:5055
+2026-05-22 13:32:14,357 - [33mPress CTRL+C to quit[0m
+2026-05-22 13:51:05,188 - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5055
+ * Running on http://192.168.0.190:5055
+2026-05-22 13:51:05,188 - [33mPress CTRL+C to quit[0m
