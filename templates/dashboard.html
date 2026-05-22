@@ -2,7 +2,7 @@
 <html>
 <head>
 
-    <title>Dashboard</title>
+    <title>Family Attendance Dashboard</title>
 
     <meta http-equiv="refresh" content="5">
 
@@ -261,42 +261,17 @@
             font-style: italic;
         }
 
-        /* Admin Actions Column */
         .admin-actions {
             min-width: 120px;
-        }
-
-        /* Backup panel special styling */
-        .backup-panel {
-            border: 2px solid #009639;
-            background: #f0fdf4;
-        }
-
-        .btn-backup {
-            background: #009639 !important;
-        }
-
-        .btn-restore {
-            background: #f59e0b !important;
-        }
-
-        .btn-download {
-            background: #3b82f6 !important;
-        }
-
-        .btn-status {
-            background: #6b7280 !important;
         }
     </style>
 
     <script>
-        // Toggle dropdown function
         function toggleDropdown(activityId) {
             const dropdown = document.getElementById(`dropdown-${activityId}`);
             dropdown.classList.toggle('show');
         }
 
-        // Close dropdown when clicking outside
         window.onclick = function(event) {
             if (!event.target.matches('.dropdown-btn')) {
                 const dropdowns = document.getElementsByClassName("dropdown-content");
@@ -308,30 +283,10 @@
             }
         }
 
-        // Confirm before removing attendee
         function confirmRemove(activityId, username) {
             if (confirm(`Remove ${username} from this activity?`)) {
                 window.location.href = `/admin/remove_attendee/${activityId}/${username}`;
             }
-        }
-
-        // Check backup status
-        function checkStatus() {
-            fetch('/admin/status')
-                .then(response => response.json())
-                .then(data => {
-                    let msg = '📊 BACKUP STATUS\n\n';
-                    msg += 'GitHub Configured: ' + (data.github_configured ? '✅ Yes' : '❌ No') + '\n';
-                    msg += '\n📁 Files in Backup:\n';
-                    for (const [file, exists] of Object.entries(data.files_exist)) {
-                        msg += '  ' + file + ': ' + (exists ? '✅' : '❌') + '\n';
-                    }
-                    msg += '\n💡 Tip: Click "Backup to GitHub" to save current data';
-                    alert(msg);
-                })
-                .catch(error => {
-                    alert('Error checking status. Make sure you are logged in as admin.');
-                });
         }
     </script>
 
@@ -348,7 +303,6 @@
         Track and manage all family events and attendance easily
     </p>
 
-    <!-- WELCOME -->
     <div class="welcome">
 
         <div class="welcome-text">
@@ -365,10 +319,9 @@
 
 </div>
 
-<!-- ADMIN PANEL -->
+<!-- ADMIN CONTROL PANEL (Only visible to admin) -->
 {% if user == "admin" %}
 
-<!-- Admin Control Panel -->
 <div class="info-box">
 
     <div class="info-title">
@@ -397,42 +350,9 @@
 
 </div>
 
-<!-- Backup Panel -->
-<div class="info-box backup-panel">
-
-    <div class="info-title">
-        💾 Data Backup & Recovery
-    </div>
-
-    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:15px;">
-
-        <button class="btn-backup" onclick="location.href='/admin/backup'">
-            ☁️ Backup to GitHub
-        </button>
-
-        <button class="btn-restore" onclick="location.href='/admin/restore'">
-            🔄 Restore from GitHub
-        </button>
-
-        <button class="btn-download" onclick="location.href='/admin/download'">
-            📥 Download Backup
-        </button>
-
-        <button class="btn-status" onclick="checkStatus()">
-            📊 Check Status
-        </button>
-
-    </div>
-
-    <div style="margin-top: 12px; font-size: 12px; color: #666;">
-        ⚡ Automatic backups happen when you add/remove users or activities
-    </div>
-
-</div>
-
 {% endif %}
 
-<!-- STATS CARDS -->
+<!-- STATISTICS CARDS -->
 <div class="stats">
 
     <div class="card">
@@ -529,7 +449,6 @@
 
             <tr>
 
-                <!-- Activity Details -->
                 <td>
 
                     <div class="title">
@@ -560,7 +479,6 @@
 
                 </td>
 
-                <!-- Date & Time -->
                 <td>
 
                     <div class="info-line">
@@ -573,12 +491,10 @@
 
                 </td>
 
-                <!-- Location -->
                 <td>
                     📍 {{ activity.location }}
                 </td>
 
-                <!-- Capacity -->
                 <td>
 
                     <div class="info-line">
@@ -593,7 +509,6 @@
 
                 </td>
 
-                <!-- Status -->
                 <td>
 
                     {% if user in attendance[key] %}
@@ -604,7 +519,6 @@
 
                 </td>
 
-                <!-- Action Column -->
                 <td class="admin-actions">
 
                     {% if user == "admin" %}
@@ -634,7 +548,7 @@
 
                     {% else %}
 
-                        <!-- Regular User: Show Join/Cancel Buttons -->
+                        <!-- Regular User: Join/Cancel Buttons -->
                         {% if user in attendance[key] %}
 
                             <a class="cancel" href="/cancel/{{ key }}">
@@ -686,15 +600,7 @@
         🔧 <strong>For Admin:</strong><br>
         • Click <strong>Attendees</strong> dropdown to see who joined<br>
         • Click <strong>Remove</strong> to take someone out of an activity<br>
-        • Use the <strong>Admin Control Panel</strong> to manage users and activities<br>
-        • Use <strong>Backup Panel</strong> to save/restore all data to GitHub
-
-        <br><br>
-
-        💾 <strong>Data Safety:</strong><br>
-        • All data is automatically backed up to GitHub when changes are made<br>
-        • You can manually backup or restore using the buttons above<br>
-        • Your family's attendance records are safe even after server restarts
+        • Use the <strong>Admin Control Panel</strong> to manage users and activities
 
     </div>
 
