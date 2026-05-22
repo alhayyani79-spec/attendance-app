@@ -265,6 +265,28 @@
         .admin-actions {
             min-width: 120px;
         }
+
+        /* Backup panel special styling */
+        .backup-panel {
+            border: 2px solid #009639;
+            background: #f0fdf4;
+        }
+
+        .btn-backup {
+            background: #009639 !important;
+        }
+
+        .btn-restore {
+            background: #f59e0b !important;
+        }
+
+        .btn-download {
+            background: #3b82f6 !important;
+        }
+
+        .btn-status {
+            background: #6b7280 !important;
+        }
     </style>
 
     <script>
@@ -292,6 +314,25 @@
                 window.location.href = `/admin/remove_attendee/${activityId}/${username}`;
             }
         }
+
+        // Check backup status
+        function checkStatus() {
+            fetch('/admin/status')
+                .then(response => response.json())
+                .then(data => {
+                    let msg = '📊 BACKUP STATUS\n\n';
+                    msg += 'GitHub Configured: ' + (data.github_configured ? '✅ Yes' : '❌ No') + '\n';
+                    msg += '\n📁 Files in Backup:\n';
+                    for (const [file, exists] of Object.entries(data.files_exist)) {
+                        msg += '  ' + file + ': ' + (exists ? '✅' : '❌') + '\n';
+                    }
+                    msg += '\n💡 Tip: Click "Backup to GitHub" to save current data';
+                    alert(msg);
+                })
+                .catch(error => {
+                    alert('Error checking status. Make sure you are logged in as admin.');
+                });
+        }
     </script>
 
 </head>
@@ -301,7 +342,7 @@
 <!-- HEADER -->
 <div class="header">
 
-    <h1>Family Attendance List</h1>
+    <h1>🇦🇪 Family Attendance List</h1>
 
     <p>
         Track and manage all family events and attendance easily
@@ -327,6 +368,7 @@
 <!-- ADMIN PANEL -->
 {% if user == "admin" %}
 
+<!-- Admin Control Panel -->
 <div class="info-box">
 
     <div class="info-title">
@@ -336,81 +378,61 @@
     <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:15px;">
 
         <button onclick="location.href='/add_account'">
-            Add Account
+            ➕ Add Account
         </button>
 
         <button onclick="location.href='/remove_account'">
-            Remove Account
+            ❌ Remove Account
         </button>
 
         <button onclick="location.href='/add_activity'">
-            Add Activity
+            📅 Add Activity
         </button>
 
         <button onclick="location.href='/remove_activity'">
-            Remove Activity
+            🗑️ Remove Activity
         </button>
 
     </div>
 
 </div>
 
-<!-- Add this after the existing admin panel -->
-{% if user == "admin" %}
+<!-- Backup Panel -->
+<div class="info-box backup-panel">
 
-<!-- Existing Admin Control Panel -->
-<div class="info-box">
-    <div class="info-title">
-        🛠️ Admin Control Panel
-    </div>
-    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:15px;">
-        <button onclick="location.href='/add_account'">Add Account</button>
-        <button onclick="location.href='/remove_account'">Remove Account</button>
-        <button onclick="location.href='/add_activity'">Add Activity</button>
-        <button onclick="location.href='/remove_activity'">Remove Activity</button>
-    </div>
-</div>
-
-<!-- NEW: Backup Panel -->
-<div class="info-box" style="border: 2px solid #009639;">
     <div class="info-title">
         💾 Data Backup & Recovery
     </div>
+
     <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:15px;">
-        <button onclick="location.href='/admin/backup'" style="background:#009639;">
+
+        <button class="btn-backup" onclick="location.href='/admin/backup'">
             ☁️ Backup to GitHub
         </button>
-        <button onclick="location.href='/admin/restore'" style="background:#f59e0b;">
+
+        <button class="btn-restore" onclick="location.href='/admin/restore'">
             🔄 Restore from GitHub
         </button>
-        <button onclick="location.href='/admin/download'" style="background:#3b82f6;">
+
+        <button class="btn-download" onclick="location.href='/admin/download'">
             📥 Download Backup
         </button>
-        <button onclick="checkStatus()" style="background:#6b7280;">
+
+        <button class="btn-status" onclick="checkStatus()">
             📊 Check Status
         </button>
-    </div>
-</div>
 
-<script>
-function checkStatus() {
-    fetch('/admin/status')
-        .then(response => response.json())
-        .then(data => {
-            let msg = 'Backup Status:\n';
-            msg += 'GitHub Configured: ' + (data.github_configured ? '✅ Yes' : '❌ No') + '\n';
-            msg += '\nFiles:\n';
-            for (const [file, exists] of Object.entries(data.files_exist)) {
-                msg += file + ': ' + (exists ? '✅' : '❌') + '\n';
-            }
-            alert(msg);
-        });
-}
-</script>
+    </div>
+
+    <div style="margin-top: 12px; font-size: 12px; color: #666;">
+        ⚡ Automatic backups happen when you add/remove users or activities
+    </div>
+
+</div>
 
 {% endif %}
 
-<!-- STATS -->
+<!-- STATS CARDS -->
 <div class="stats">
 
     <div class="card">
@@ -434,7 +456,7 @@ function checkStatus() {
 
         </h2>
 
-        <p>Joined Activities</p>
+        <p>Activities You Joined</p>
 
     </div>
 
@@ -478,158 +500,170 @@ function checkStatus() {
 
 </div>
 
+<!-- MESSAGE -->
 {% if msg %}
 <div class="msg">
     {{ msg }}
 </div>
 {% endif %}
 
-<!-- TABLE -->
+<!-- ACTIVITIES TABLE -->
 <div class="container">
 
-<table>
-    <thead>
-        <tr>
-            <th>Activity</th>
-            <th>Date / Time</th>
-            <th>Location</th>
-            <th>Capacity</th>
-            <th>Status</th>
-            <th>Action</th>
-        </tr>
-    </thead>
-    <tbody>
+    <table>
 
-{% for key, activity in activities.items() %}
+        <thead>
+            <tr>
+                <th>Activity</th>
+                <th>Date / Time</th>
+                <th>Location</th>
+                <th>Capacity</th>
+                <th>Your Status</th>
+                <th>Action</th>
+            </tr>
+        </thead>
 
-<tr>
+        <tbody>
 
-    <td>
+            {% for key, activity in activities.items() %}
 
-        <div class="title">
+            <tr>
 
-            {% if key == "national_day" %}
-                🇦🇪
-            {% elif key == "eid" %}
-                🌙
-            {% elif key == "flag_day" %}
-                🇦🇪
-            {% elif key == "memorial" %}
-                🕌
-            {% endif %}
+                <!-- Activity Details -->
+                <td>
 
-            {{ activity.title }}
+                    <div class="title">
 
-        </div>
+                        {% if key == "national_day" %}
+                            🇦🇪
+                        {% elif key == "eid" %}
+                            🌙
+                        {% elif key == "flag_day" %}
+                            🇦🇪
+                        {% elif key == "memorial" %}
+                            🕌
+                        {% else %}
+                            📌
+                        {% endif %}
 
-        <div class="arabic">
-            {{ activity.arabic }}
-        </div>
+                        {{ activity.title }}
 
-        <div>
-            {{ activity.description }}
-        </div>
+                    </div>
 
-    </td>
+                    <div class="arabic">
+                        {{ activity.arabic }}
+                    </div>
 
-    <td>
+                    <div>
+                        {{ activity.description }}
+                    </div>
 
-        <div class="info-line">
-            📅 {{ activity.date }}
-        </div>
+                </td>
 
-        <div class="info-line">
-            ⏰ {{ activity.time }}
-        </div>
+                <!-- Date & Time -->
+                <td>
 
-    </td>
+                    <div class="info-line">
+                        📅 {{ activity.date }}
+                    </div>
 
-    <td>
-        {{ activity.location }}
-    </td>
+                    <div class="info-line">
+                        ⏰ {{ activity.time }}
+                    </div>
 
-    <td>
+                </td>
 
-        <div class="info-line">
-            👥 {{ attendance[key]|length }} / {{ activity.capacity }}
-        </div>
+                <!-- Location -->
+                <td>
+                    📍 {{ activity.location }}
+                </td>
 
-        {% set remaining = activity.capacity - attendance[key]|length %}
+                <!-- Capacity -->
+                <td>
 
-        <div class="info-line">
-            🪑 {{ remaining }} seats left
-        </div>
+                    <div class="info-line">
+                        👥 {{ attendance[key]|length }} / {{ activity.capacity }}
+                    </div>
 
-    </td>
+                    {% set remaining = activity.capacity - attendance[key]|length %}
 
-    <td>
+                    <div class="info-line">
+                        🪑 {{ remaining }} seats left
+                    </div>
 
-        {% if user in attendance[key] %}
-            ✅ Joined
-        {% else %}
-            ❌ Not Joined
-        {% endif %}
+                </td>
 
-    </td>
+                <!-- Status -->
+                <td>
 
-    <td class="admin-actions">
-
-        {% if user == "admin" %}
-
-            <!-- Admin: Show Attendees Dropdown -->
-            <div class="dropdown">
-                <button class="dropdown-btn" onclick="toggleDropdown('{{ key }}')">
-                    👥 Attendees ({{ attendance[key]|length }})
-                </button>
-                <div id="dropdown-{{ key }}" class="dropdown-content">
-                    {% if attendance[key] %}
-                        {% for attendee in attendance[key] %}
-                            <div class="attendee-item">
-                                <span class="attendee-name">{{ attendee }}</span>
-                                <button class="remove-attendee" onclick="confirmRemove('{{ key }}', '{{ attendee }}')">
-                                    Remove
-                                </button>
-                            </div>
-                        {% endfor %}
+                    {% if user in attendance[key] %}
+                        <span style="color:#16a34a; font-weight:bold;">✅ Joined</span>
                     {% else %}
-                        <div class="empty-attendees">
-                            No attendees yet
-                        </div>
+                        <span style="color:#6b7280;">❌ Not Joined</span>
                     {% endif %}
-                </div>
-            </div>
 
-        {% else %}
+                </td>
 
-            <!-- Regular User: Show Join/Cancel Buttons -->
-            {% if user in attendance[key] %}
+                <!-- Action Column -->
+                <td class="admin-actions">
 
-                <a class="cancel" href="/cancel/{{ key }}">
-                    Cancel
-                </a>
+                    {% if user == "admin" %}
 
-            {% else %}
+                        <!-- Admin: Show Attendees Dropdown -->
+                        <div class="dropdown">
+                            <button class="dropdown-btn" onclick="toggleDropdown('{{ key }}')">
+                                👥 Attendees ({{ attendance[key]|length }})
+                            </button>
+                            <div id="dropdown-{{ key }}" class="dropdown-content">
+                                {% if attendance[key] %}
+                                    {% for attendee in attendance[key] %}
+                                        <div class="attendee-item">
+                                            <span class="attendee-name">{{ attendee }}</span>
+                                            <button class="remove-attendee" onclick="confirmRemove('{{ key }}', '{{ attendee }}')">
+                                                Remove
+                                            </button>
+                                        </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <div class="empty-attendees">
+                                        No attendees yet
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
 
-                <a class="join" href="/join/{{ key }}">
-                    Join
-                </a>
+                    {% else %}
 
-            {% endif %}
+                        <!-- Regular User: Show Join/Cancel Buttons -->
+                        {% if user in attendance[key] %}
 
-        {% endif %}
+                            <a class="cancel" href="/cancel/{{ key }}">
+                                Cancel
+                            </a>
 
-    </td>
+                        {% else %}
 
-</tr>
+                            <a class="join" href="/join/{{ key }}">
+                                Join
+                            </a>
 
-{% endfor %}
+                        {% endif %}
 
-    </tbody>
-</table>
+                    {% endif %}
+
+                </td>
+
+            </tr>
+
+            {% endfor %}
+
+        </tbody>
+
+    </table>
 
 </div>
 
-<!-- INFO -->
+<!-- INFORMATION FOOTER -->
 <div class="info-box">
 
     <div class="info-title">
@@ -638,18 +672,29 @@ function checkStatus() {
 
     <div>
 
-        This dashboard allows family members to join and manage attendance
-        for UAE-related activities and gatherings.
+        <strong>How to use this system:</strong>
 
         <br><br>
 
-        <b>For Regular Users:</b> Click <b>Join</b> to register for an activity and
-        <b>Cancel</b> if you cannot attend anymore.
+        📌 <strong>For Family Members:</strong><br>
+        • Click <strong style="color:#16a34a;">Join</strong> to register for an activity<br>
+        • Click <strong style="color:#dc2626;">Cancel</strong> if you cannot attend anymore<br>
+        • Your name will appear in the attendees list for that activity
 
         <br><br>
 
-        <b>For Admin:</b> Click the <b>Attendees</b> dropdown to see who has joined
-        and remove attendees if needed.
+        🔧 <strong>For Admin:</strong><br>
+        • Click <strong>Attendees</strong> dropdown to see who joined<br>
+        • Click <strong>Remove</strong> to take someone out of an activity<br>
+        • Use the <strong>Admin Control Panel</strong> to manage users and activities<br>
+        • Use <strong>Backup Panel</strong> to save/restore all data to GitHub
+
+        <br><br>
+
+        💾 <strong>Data Safety:</strong><br>
+        • All data is automatically backed up to GitHub when changes are made<br>
+        • You can manually backup or restore using the buttons above<br>
+        • Your family's attendance records are safe even after server restarts
 
     </div>
 
