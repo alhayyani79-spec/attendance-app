@@ -198,6 +198,43 @@ def logout():
 
     return redirect("/login")
 
+@app.route("/add_account", methods=["GET", "POST"])
+def add_account():
+
+    if "user" not in session:
+        return redirect("/login")
+
+    # ONLY ADMIN CAN ACCESS
+    if session["user"] != "admin":
+        return redirect("/dashboard")
+
+    if request.method == "POST":
+
+        new_username = request.form.get("username")
+        new_password = request.form.get("password")
+
+        # VALIDATION
+        if new_username in users:
+            session["msg"] = "User already exists!"
+            return redirect("/dashboard")
+
+        if not new_username or not new_password:
+            session["msg"] = "Invalid input!"
+            return redirect("/dashboard")
+
+        # ADD USER
+        users[new_username] = new_password
+
+        # SAVE TO JSON
+        save_data()
+
+        session["msg"] = f"Account '{new_username}' created!"
+
+        return redirect("/dashboard")
+
+    # SIMPLE FORM PAGE
+    return render_template("add_account.html")
+
 # =========================
 # RUN
 # =========================
