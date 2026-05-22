@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Remove Account</title>
+    <style>
+        body{
+            font-family:Arial;
+            background:#f4f7f5;
+            display:flex;
+            justify-content:center;
+            align-items:center;
+            height:100vh;
+        }
+        .box{
+            background:white;
+            padding:30px;
+            border-radius:15px;
+            width:300px;
+            text-align:center;
+        }
+        select, button{
+            width:100%;
+            padding:10px;
+            margin:10px 0;
+            border-radius:8px;
+        }
+        button{
+            background:#dc2626;
+            color:white;
+            border:none;
+            cursor:pointer;
+        }
+        a{
+            color:#009639;
+            text-decoration:none;
+        }
+    </style>
+</head>
+<body>
+<div class="box">
+    <h2>Remove Account</h2>
+    <form method="POST">
+        <select name="username" required>
+            <option value="">Select user to remove</option>
+            {% for user in users %}
+            <option value="{{ user }}">{{ user }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit">Remove Account</button>
+    </form>
+    <a href="/dashboard">Cancel</a>
+</div>
+</body>
+</html>

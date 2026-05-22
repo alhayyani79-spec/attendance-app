@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Add Activity</title>
+    <style>
+        body{
+            font-family:Arial;
+            background:#f4f7f5;
+            margin:0;
+            padding:20px;
+        }
+        .container{
+            max-width:500px;
+            margin:0 auto;
+            background:white;
+            padding:30px;
+            border-radius:15px;
+        }
+        input, textarea{
+            width:100%;
+            padding:10px;
+            margin:10px 0;
+            border:1px solid #ddd;
+            border-radius:8px;
+        }
+        button{
+            width:100%;
+            padding:10px;
+            background:#009639;
+            color:white;
+            border:none;
+            border-radius:8px;
+            cursor:pointer;
+        }
+        a{
+            display:block;
+            text-align:center;
+            margin-top:10px;
+            color:#009639;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>Add New Activity</h2>
+    <form method="POST">
+        <input type="text" name="activity_id" placeholder="Activity ID (e.g., new_year)" required>
+        <input type="text" name="title" placeholder="Title in English" required>
+        <input type="text" name="arabic" placeholder="Title in Arabic" required>
+        <textarea name="description" placeholder="Description" rows="3" required></textarea>
+        <input type="text" name="date" placeholder="Date (e.g., 1 Jan 2025)" required>
+        <input type="text" name="time" placeholder="Time (e.g., 6:00 PM)" required>
+        <input type="text" name="location" placeholder="Location" required>
+        <input type="number" name="capacity" placeholder="Capacity" required>
+        <button type="submit">Add Activity</button>
+    </form>
+    <a href="/dashboard">Back to Dashboard</a>
+</div>
+</body>
+</html>
