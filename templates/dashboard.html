@@ -355,6 +355,59 @@
 
 </div>
 
+<!-- Add this after the existing admin panel -->
+{% if user == "admin" %}
+
+<!-- Existing Admin Control Panel -->
+<div class="info-box">
+    <div class="info-title">
+        🛠️ Admin Control Panel
+    </div>
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:15px;">
+        <button onclick="location.href='/add_account'">Add Account</button>
+        <button onclick="location.href='/remove_account'">Remove Account</button>
+        <button onclick="location.href='/add_activity'">Add Activity</button>
+        <button onclick="location.href='/remove_activity'">Remove Activity</button>
+    </div>
+</div>
+
+<!-- NEW: Backup Panel -->
+<div class="info-box" style="border: 2px solid #009639;">
+    <div class="info-title">
+        💾 Data Backup & Recovery
+    </div>
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:15px;">
+        <button onclick="location.href='/admin/backup'" style="background:#009639;">
+            ☁️ Backup to GitHub
+        </button>
+        <button onclick="location.href='/admin/restore'" style="background:#f59e0b;">
+            🔄 Restore from GitHub
+        </button>
+        <button onclick="location.href='/admin/download'" style="background:#3b82f6;">
+            📥 Download Backup
+        </button>
+        <button onclick="checkStatus()" style="background:#6b7280;">
+            📊 Check Status
+        </button>
+    </div>
+</div>
+
+<script>
+function checkStatus() {
+    fetch('/admin/status')
+        .then(response => response.json())
+        .then(data => {
+            let msg = 'Backup Status:\n';
+            msg += 'GitHub Configured: ' + (data.github_configured ? '✅ Yes' : '❌ No') + '\n';
+            msg += '\nFiles:\n';
+            for (const [file, exists] of Object.entries(data.files_exist)) {
+                msg += file + ': ' + (exists ? '✅' : '❌') + '\n';
+            }
+            alert(msg);
+        });
+}
+</script>
+
 {% endif %}
 
 <!-- STATS -->

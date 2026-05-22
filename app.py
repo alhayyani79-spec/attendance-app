@@ -1,108 +1,137 @@
-from flask import Flask, render_template, request, redirect, session
+from flask import Flask, render_template, request, redirect, session, send_file
 import os
 import logging
 import json
 import secrets
 from werkzeug.security import generate_password_hash, check_password_hash
 import requests
+import base64
+import io
+import zipfile
 from datetime import datetime
 
 app = Flask(__name__)
-
-# Use environment variable for secret key
 app.secret_key = os.environ.get("SECRET_KEY", secrets.token_hex(16))
 
-# Create data directory if it doesn't exist
+# Create data directory
 os.makedirs("data", exist_ok=True)
 
-# Gist backup configuration (optional but recommended for Render)
-GIST_TOKEN = os.environ.get("GITHUB_GIST_TOKEN")  # Get from https://gist.github.com/
-GIST_ID = os.environ.get("GIST_ID")  # Your backup Gist ID
-
 # =========================
-# BACKUP FUNCTIONS
+# GITHUB BACKUP CONFIGURATION
 # =========================
+# Add these to your Render environment variables:
+GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
+REPO_NAME = os.environ.get("REPO_NAME", "")  # Format: "username/repo-name"
+BRANCH = os.environ.get("BRANCH", "main")
 
-def backup_to_gist():
-    """Backup all JSON files to GitHub Gist"""
-    if not GIST_TOKEN or not GIST_ID:
-        print("Gist backup not configured - skipping")
-        return
-    
-    try:
-        files = {}
-        for filename in ["users.json", "activities.json", "attendance.json"]:
-            with open(f"data/{filename}", "r") as f:
-                files[filename] = {"content": f.read()}
-        
-        # Update Gist
-        url = f"https://api.github.com/gists/{GIST_ID}"
-        headers = {
-            "Authorization": f"token {GIST_TOKEN}",
-            "Accept": "application/vnd.github.v3+json"
-        }
-        data = {
-            "files": files,
-            "description": f"Attendance Backup - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-        }
-        
-        response = requests.patch(url, headers=headers, json=data)
-        if response.status_code == 200:
-            print("Backup to Gist successful")
-        else:
-            print(f"Backup failed: {response.status_code}")
-    except Exception as e:
-        print(f"Backup error: {e}")
-
-def restore_from_gist():
-    """Restore JSON files from GitHub Gist"""
-    if not GIST_TOKEN or not GIST_ID:
-        print("Gist restore not configured - skipping")
+def backup_to_github():
+    """Save all JSON files to GitHub repository"""
+    if not GITHUB_TOKEN or not REPO_NAME:
+        print("⚠️ GitHub backup not configured - skipping")
         return False
     
     try:
-        url = f"https://api.github.com/gists/{GIST_ID}"
-        headers = {"Authorization": f"token {GIST_TOKEN}"}
+        headers = {
+            "Authorization": f"token {GITHUB_TOKEN}",
+            "Accept": "application/vnd.github.v3+json"
+        }
         
-        response = requests.get(url, headers=headers)
-        if response.status_code == 200:
-            gist_data = response.json()
-            files = gist_data.get("files", {})
+        for filename in ["users.json", "activities.json", "attendance.json"]:
+            file_path = f"data/{filename}"
             
-            for filename in ["users.json", "activities.json", "attendance.json"]:
-                if filename in files:
-                    content = files[filename]["content"]
-                    with open(f"data/{filename}", "w") as f:
-                        f.write(content)
+            if not os.path.exists(file_path):
+                print(f"⚠️ {filename} not found, skipping")
+                continue
             
-            print("Restored from Gist backup")
-            return True
+            with open(file_path, "r") as f:
+                content = f.read()
+            
+            # Encode content to base64
+            encoded_content = base64.b64encode(content.encode()).decode()
+            
+            # Get current file SHA (if exists)
+            url = f"https://api.github.com/repos/{REPO_NAME}/contents/data/{filename}"
+            response = requests.get(url, headers=headers)
+            
+            data = {
+                "message": f"Auto-backup {filename} - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+                "content": encoded_content,
+                "branch": BRANCH
+            }
+            
+            if response.status_code == 200:
+                # File exists, get SHA for update
+                data["sha"] = response.json()["sha"]
+                print(f"🔄 Updating {filename} on GitHub...")
+            else:
+                print(f"📤 Creating {filename} on GitHub...")
+            
+            # Push to GitHub
+            put_response = requests.put(url, headers=headers, json=data)
+            
+            if put_response.status_code in [200, 201]:
+                print(f"✅ {filename} backed up to GitHub")
+            else:
+                print(f"❌ Failed to backup {filename}: {put_response.status_code}")
+        
+        return True
+        
     except Exception as e:
-        print(f"Restore error: {e}")
+        print(f"❌ GitHub backup error: {e}")
+        return False
+
+def restore_from_github():
+    """Restore JSON files from GitHub on startup"""
+    if not GITHUB_TOKEN or not REPO_NAME:
+        print("⚠️ GitHub restore not configured - using local files")
+        return False
     
-    return False
+    try:
+        headers = {"Authorization": f"token {GITHUB_TOKEN}"}
+        restored_any = False
+        
+        for filename in ["users.json", "activities.json", "attendance.json"]:
+            url = f"https://api.github.com/repos/{REPO_NAME}/contents/data/{filename}"
+            response = requests.get(url, headers=headers)
+            
+            if response.status_code == 200:
+                content = response.json()["content"]
+                decoded = base64.b64decode(content).decode()
+                
+                with open(f"data/{filename}", "w") as f:
+                    f.write(decoded)
+                
+                print(f"✅ Restored {filename} from GitHub")
+                restored_any = True
+            else:
+                print(f"⚠️ No backup found for {filename} on GitHub")
+        
+        return restored_any
+        
+    except Exception as e:
+        print(f"❌ GitHub restore error: {e}")
+        return False
 
 # =========================
-# LOAD JSON DATA WITH BACKUP
+# LOAD JSON DATA WITH AUTO-RESTORE
 # =========================
 
 def load_data():
-    """Load data from JSON files, with auto-restore if missing"""
+    """Load data from JSON files or GitHub backup"""
     
-    # Check if files exist and are valid
-    files_exist = all(os.path.exists(f"data/{f}") for f in ["users.json", "activities.json", "attendance.json"])
+    # Check if local files exist
+    local_files_exist = all(os.path.exists(f"data/{f}") for f in ["users.json", "activities.json", "attendance.json"])
     
-    if not files_exist:
-        print("Data files missing, attempting restore from Gist...")
-        if restore_from_gist():
-            files_exist = True
+    if not local_files_exist:
+        print("📥 Local files missing, attempting restore from GitHub...")
+        if restore_from_github():
+            local_files_exist = True
     
-    # Load or create default files
+    # Load users
     try:
         with open("data/users.json", "r") as f:
             users = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
-        # Default users with hashed passwords
         users = {
             "admin": generate_password_hash("1234"),
             "mohammad": generate_password_hash("1029"),
@@ -111,6 +140,7 @@ def load_data():
         }
         save_users_only(users)
     
+    # Load activities
     try:
         with open("data/activities.json", "r") as f:
             activities = json.load(f)
@@ -155,6 +185,7 @@ def load_data():
         }
         save_activities_only(activities)
     
+    # Load attendance
     try:
         with open("data/attendance.json", "r") as f:
             attendance = json.load(f)
@@ -181,18 +212,14 @@ def save_attendance_only(attendance):
     with open("data/attendance.json", "w") as f:
         json.dump(attendance, f, indent=4)
 
-# =========================
-# SAVE ALL DATA
-# =========================
-
 def save_all_data(users, activities, attendance):
-    """Save all data to JSON files and optionally backup to Gist"""
+    """Save all data and backup to GitHub"""
     save_users_only(users)
     save_activities_only(activities)
     save_attendance_only(attendance)
     
-    # Auto-backup to Gist if configured
-    backup_to_gist()
+    # Auto-backup to GitHub
+    backup_to_github()
 
 # Load initial data
 users, activities, attendance = load_data()
@@ -285,7 +312,6 @@ def join(activity_id):
     
     user = session["user"]
     
-    # ADMIN CANNOT JOIN
     if user == "admin":
         session["msg"] = "Admin cannot join activities."
         return redirect("/dashboard")
@@ -324,6 +350,35 @@ def cancel(activity_id):
     return redirect("/dashboard")
 
 # =========================
+# ADMIN REMOVE ATTENDEE
+# =========================
+
+@app.route("/admin/remove_attendee/<activity_id>/<username>")
+def admin_remove_attendee(activity_id, username):
+    """Admin can remove any attendee from an activity"""
+    
+    if "user" not in session:
+        return redirect("/login")
+    
+    if session["user"] != "admin":
+        session["msg"] = "Unauthorized access!"
+        return redirect("/dashboard")
+    
+    if activity_id not in attendance:
+        session["msg"] = "Activity not found!"
+        return redirect("/dashboard")
+    
+    if username in attendance[activity_id]:
+        attendance[activity_id].remove(username)
+        save_all_data(users, activities, attendance)
+        session["msg"] = f"Removed '{username}' from {activities[activity_id]['title']}"
+        logging.info(f"Admin removed '{username}' from activity '{activity_id}'")
+    else:
+        session["msg"] = f"'{username}' is not registered for this activity"
+    
+    return redirect("/dashboard")
+
+# =========================
 # LOGOUT
 # =========================
 
@@ -356,7 +411,6 @@ def add_account():
             session["msg"] = "Invalid input!"
             return redirect("/dashboard")
         
-        # Store hashed password
         users[new_username] = generate_password_hash(new_password)
         save_all_data(users, activities, attendance)
         
@@ -383,7 +437,6 @@ def remove_account():
             session["msg"] = "Cannot remove admin account!"
         elif username in users:
             del users[username]
-            # Remove from all attendance lists
             for activity in attendance:
                 if username in attendance[activity]:
                     attendance[activity].remove(username)
@@ -395,7 +448,6 @@ def remove_account():
         
         return redirect("/dashboard")
     
-    # Filter out admin from list
     non_admin_users = [u for u in users.keys() if u != "admin"]
     return render_template("remove_account.html", users=non_admin_users)
 
@@ -462,63 +514,72 @@ def remove_activity():
     return render_template("remove_activity.html", activities=activities)
 
 # =========================
-# MANUAL BACKUP
+# BACKUP & RESTORE ROUTES
 # =========================
 
 @app.route("/admin/backup")
-def manual_backup():
+def admin_backup():
+    """Manually backup to GitHub"""
     if session.get("user") != "admin":
         return "Unauthorized", 401
     
-    backup_to_gist()
-    session["msg"] = "Manual backup completed!"
+    if backup_to_github():
+        session["msg"] = "✅ Manual backup to GitHub completed!"
+    else:
+        session["msg"] = "❌ Backup failed! Check GitHub configuration."
+    
     return redirect("/dashboard")
 
 @app.route("/admin/restore")
-def manual_restore():
+def admin_restore():
+    """Manually restore from GitHub"""
     if session.get("user") != "admin":
         return "Unauthorized", 401
     
-    if restore_from_gist():
+    if restore_from_github():
         global users, activities, attendance
         users, activities, attendance = load_data()
-        session["msg"] = "Data restored from backup!"
+        session["msg"] = "✅ Data restored from GitHub successfully!"
     else:
-        session["msg"] = "Restore failed - check Gist configuration"
+        session["msg"] = "❌ Restore failed! Check GitHub configuration."
     
     return redirect("/dashboard")
 
-# =========================
-# ADMIN REMOVE ATTENDEE
-# =========================
+@app.route("/admin/download")
+def admin_download():
+    """Download all data as zip file"""
+    if session.get("user") != "admin":
+        return "Unauthorized", 401
+    
+    memory_file = io.BytesIO()
+    with zipfile.ZipFile(memory_file, 'w') as zf:
+        for file in ["users.json", "activities.json", "attendance.json"]:
+            file_path = f"data/{file}"
+            if os.path.exists(file_path):
+                zf.write(file_path, file)
+    
+    memory_file.seek(0)
+    return send_file(
+        memory_file,
+        download_name=f"attendance_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip",
+        as_attachment=True
+    )
 
-@app.route("/admin/remove_attendee/<activity_id>/<username>")
-def admin_remove_attendee(activity_id, username):
-    """Admin can remove any attendee from an activity"""
+@app.route("/admin/status")
+def admin_status():
+    """Check backup status"""
+    if session.get("user") != "admin":
+        return "Unauthorized", 401
     
-    if "user" not in session:
-        return redirect("/login")
-    
-    # Only admin can access this
-    if session["user"] != "admin":
-        session["msg"] = "Unauthorized access!"
-        return redirect("/dashboard")
-    
-    # Check if activity exists
-    if activity_id not in attendance:
-        session["msg"] = "Activity not found!"
-        return redirect("/dashboard")
-    
-    # Remove the attendee
-    if username in attendance[activity_id]:
-        attendance[activity_id].remove(username)
-        save_all_data(users, activities, attendance)
-        session["msg"] = f"Removed '{username}' from {activities[activity_id]['title']}"
-        logging.info(f"Admin removed '{username}' from activity '{activity_id}'")
-    else:
-        session["msg"] = f"'{username}' is not registered for this activity"
-    
-    return redirect("/dashboard")
+    status = {
+        "github_configured": bool(GITHUB_TOKEN and REPO_NAME),
+        "files_exist": {
+            "users.json": os.path.exists("data/users.json"),
+            "activities.json": os.path.exists("data/activities.json"),
+            "attendance.json": os.path.exists("data/attendance.json")
+        }
+    }
+    return status
 
 # =========================
 # RUN
