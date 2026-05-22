@@ -489,6 +489,38 @@ def manual_restore():
     return redirect("/dashboard")
 
 # =========================
+# ADMIN REMOVE ATTENDEE
+# =========================
+
+@app.route("/admin/remove_attendee/<activity_id>/<username>")
+def admin_remove_attendee(activity_id, username):
+    """Admin can remove any attendee from an activity"""
+    
+    if "user" not in session:
+        return redirect("/login")
+    
+    # Only admin can access this
+    if session["user"] != "admin":
+        session["msg"] = "Unauthorized access!"
+        return redirect("/dashboard")
+    
+    # Check if activity exists
+    if activity_id not in attendance:
+        session["msg"] = "Activity not found!"
+        return redirect("/dashboard")
+    
+    # Remove the attendee
+    if username in attendance[activity_id]:
+        attendance[activity_id].remove(username)
+        save_all_data(users, activities, attendance)
+        session["msg"] = f"Removed '{username}' from {activities[activity_id]['title']}"
+        logging.info(f"Admin removed '{username}' from activity '{activity_id}'")
+    else:
+        session["msg"] = f"'{username}' is not registered for this activity"
+    
+    return redirect("/dashboard")
+
+# =========================
 # RUN
 # =========================
 

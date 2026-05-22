@@ -89,7 +89,7 @@
             margin:0 30px 30px 30px;
             background:white;
             border-radius:15px;
-            overflow:hidden;
+            overflow-x:auto;
         }
 
         table{
@@ -174,6 +174,7 @@
             padding:8px 12px;
             border-radius:8px;
             text-decoration:none;
+            display:inline-block;
         }
 
         .cancel{
@@ -183,9 +184,115 @@
             padding:8px 12px;
             border-radius:8px;
             text-decoration:none;
+            display:inline-block;
         }
 
+        /* DROPDOWN STYLES */
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .dropdown-btn {
+            background:#009639;
+            color:white;
+            padding:8px 12px;
+            border-radius:8px;
+            cursor:pointer;
+            border:none;
+            font-size:14px;
+        }
+
+        .dropdown-btn:hover {
+            background:#007a2e;
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: white;
+            min-width: 200px;
+            max-height: 300px;
+            overflow-y: auto;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            border-radius: 8px;
+            z-index: 1;
+            right: 0;
+        }
+
+        .dropdown-content.show {
+            display: block;
+        }
+
+        .attendee-item {
+            padding: 10px 15px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .attendee-item:hover {
+            background-color: #f5f5f5;
+        }
+
+        .attendee-name {
+            font-weight: 500;
+        }
+
+        .remove-attendee {
+            background-color: #dc2626;
+            color: white;
+            border: none;
+            padding: 4px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .remove-attendee:hover {
+            background-color: #b91c1c;
+        }
+
+        .empty-attendees {
+            padding: 15px;
+            text-align: center;
+            color: gray;
+            font-style: italic;
+        }
+
+        /* Admin Actions Column */
+        .admin-actions {
+            min-width: 120px;
+        }
     </style>
+
+    <script>
+        // Toggle dropdown function
+        function toggleDropdown(activityId) {
+            const dropdown = document.getElementById(`dropdown-${activityId}`);
+            dropdown.classList.toggle('show');
+        }
+
+        // Close dropdown when clicking outside
+        window.onclick = function(event) {
+            if (!event.target.matches('.dropdown-btn')) {
+                const dropdowns = document.getElementsByClassName("dropdown-content");
+                for (let i = 0; i < dropdowns.length; i++) {
+                    if (dropdowns[i].classList.contains('show')) {
+                        dropdowns[i].classList.remove('show');
+                    }
+                }
+            }
+        }
+
+        // Confirm before removing attendee
+        function confirmRemove(activityId, username) {
+            if (confirm(`Remove ${username} from this activity?`)) {
+                window.location.href = `/admin/remove_attendee/${activityId}/${username}`;
+            }
+        }
+    </script>
 
 </head>
 
@@ -328,118 +435,143 @@
 <div class="container">
 
 <table>
-
-<tr>
-    <th>Activity</th>
-    <th>Date / Time</th>
-    <th>Location</th>
-    <th>Capacity</th>
-    <th>Status</th>
-    <th>Action</th>
-</tr>
+    <thead>
+        <tr>
+            <th>Activity</th>
+            <th>Date / Time</th>
+            <th>Location</th>
+            <th>Capacity</th>
+            <th>Status</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody>
 
 {% for key, activity in activities.items() %}
 
 <tr>
 
-<td>
+    <td>
 
-    <div class="title">
+        <div class="title">
 
-        {% if key == "national_day" %}
-            🇦🇪
-        {% elif key == "eid" %}
-            🌙
-        {% elif key == "flag_day" %}
-            🇦🇪
-        {% elif key == "memorial" %}
-            🕌
+            {% if key == "national_day" %}
+                🇦🇪
+            {% elif key == "eid" %}
+                🌙
+            {% elif key == "flag_day" %}
+                🇦🇪
+            {% elif key == "memorial" %}
+                🕌
+            {% endif %}
+
+            {{ activity.title }}
+
+        </div>
+
+        <div class="arabic">
+            {{ activity.arabic }}
+        </div>
+
+        <div>
+            {{ activity.description }}
+        </div>
+
+    </td>
+
+    <td>
+
+        <div class="info-line">
+            📅 {{ activity.date }}
+        </div>
+
+        <div class="info-line">
+            ⏰ {{ activity.time }}
+        </div>
+
+    </td>
+
+    <td>
+        {{ activity.location }}
+    </td>
+
+    <td>
+
+        <div class="info-line">
+            👥 {{ attendance[key]|length }} / {{ activity.capacity }}
+        </div>
+
+        {% set remaining = activity.capacity - attendance[key]|length %}
+
+        <div class="info-line">
+            🪑 {{ remaining }} seats left
+        </div>
+
+    </td>
+
+    <td>
+
+        {% if user in attendance[key] %}
+            ✅ Joined
+        {% else %}
+            ❌ Not Joined
         {% endif %}
 
-        {{ activity.title }}
+    </td>
 
-    </div>
+    <td class="admin-actions">
 
-    <div class="arabic">
-        {{ activity.arabic }}
-    </div>
+        {% if user == "admin" %}
 
-    <div>
-        {{ activity.description }}
-    </div>
+            <!-- Admin: Show Attendees Dropdown -->
+            <div class="dropdown">
+                <button class="dropdown-btn" onclick="toggleDropdown('{{ key }}')">
+                    👥 Attendees ({{ attendance[key]|length }})
+                </button>
+                <div id="dropdown-{{ key }}" class="dropdown-content">
+                    {% if attendance[key] %}
+                        {% for attendee in attendance[key] %}
+                            <div class="attendee-item">
+                                <span class="attendee-name">{{ attendee }}</span>
+                                <button class="remove-attendee" onclick="confirmRemove('{{ key }}', '{{ attendee }}')">
+                                    Remove
+                                </button>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-attendees">
+                            No attendees yet
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
 
-</td>
+        {% else %}
 
-<td>
+            <!-- Regular User: Show Join/Cancel Buttons -->
+            {% if user in attendance[key] %}
 
-    <div class="info-line">
-        📅 {{ activity.date }}
-    </div>
+                <a class="cancel" href="/cancel/{{ key }}">
+                    Cancel
+                </a>
 
-    <div class="info-line">
-        ⏰ {{ activity.time }}
-    </div>
+            {% else %}
 
-</td>
+                <a class="join" href="/join/{{ key }}">
+                    Join
+                </a>
 
-<td>
-    {{ activity.location }}
-</td>
+            {% endif %}
 
-<td>
+        {% endif %}
 
-    <div class="info-line">
-        👥 {{ attendance[key]|length }} / {{ activity.capacity }}
-    </div>
-
-    {% set remaining = activity.capacity - attendance[key]|length %}
-
-    <div class="info-line">
-        🪑 {{ remaining }} seats left
-    </div>
-
-</td>
-
-<td>
-
-{% if user in attendance[key] %}
-    Joined
-{% else %}
-    Not Joined
-{% endif %}
-
-</td>
-
-<td>
-
-{% if user == "admin" %}
-
-    Admin Account
-
-{% else %}
-
-    {% if user in attendance[key] %}
-
-        <a class="cancel" href="/cancel/{{ key }}">
-            Cancel
-        </a>
-
-    {% else %}
-
-        <a class="join" href="/join/{{ key }}">
-            Join
-        </a>
-
-    {% endif %}
-
-{% endif %}
-
-</td>
+    </td>
 
 </tr>
 
 {% endfor %}
 
+    </tbody>
 </table>
 
 </div>
@@ -458,13 +590,13 @@
 
         <br><br>
 
-        Click <b>Join</b> to register for an activity and
+        <b>For Regular Users:</b> Click <b>Join</b> to register for an activity and
         <b>Cancel</b> if you cannot attend anymore.
 
         <br><br>
 
-        Admin accounts can manage users and activities through the
-        admin control panel.
+        <b>For Admin:</b> Click the <b>Attendees</b> dropdown to see who has joined
+        and remove attendees if needed.
 
     </div>
 
