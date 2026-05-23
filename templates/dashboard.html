@@ -262,7 +262,7 @@
         }
 
         .admin-actions {
-            min-width: 160px;
+            min-width: 220px;
         }
 
         .edit-btn {
@@ -278,6 +278,36 @@
 
         .edit-btn:hover {
             background:#2563eb;
+        }
+
+        .media-btn {
+            background:#8b5cf6;
+            color:white;
+            padding:8px 12px;
+            border-radius:8px;
+            text-decoration:none;
+            display:inline-block;
+            margin-right:8px;
+            font-size:14px;
+        }
+
+        .media-btn:hover {
+            background:#7c3aed;
+        }
+
+        .viewonly-btn {
+            background:#a78bfa;
+            color:white;
+            padding:8px 12px;
+            border-radius:8px;
+            text-decoration:none;
+            display:inline-block;
+            margin-right:8px;
+            font-size:14px;
+        }
+
+        .viewonly-btn:hover {
+            background:#8b5cf6;
         }
     </style>
 
@@ -445,7 +475,7 @@
 <!-- ACTIVITIES TABLE -->
 <div class="container">
 
-    <table>
+    </table>
 
         <thead>
             <tr>
@@ -464,7 +494,7 @@
 
             <tr>
 
-                <td>
+                <tr>
 
                     <div class="title">
 
@@ -492,7 +522,7 @@
                         {{ activity.description }}
                     </div>
 
-                </td>
+                </div>
 
                 <td>
 
@@ -504,11 +534,11 @@
                         ⏰ {{ activity.time }}
                     </div>
 
-                </td>
+                </div>
 
                 <td>
                     📍 {{ activity.location }}
-                </td>
+                </div>
 
                 <td>
 
@@ -522,7 +552,7 @@
                         🪑 {{ remaining }} seats left
                     </div>
 
-                </td>
+                </div>
 
                 <td>
 
@@ -532,18 +562,23 @@
                         <span style="color:#6b7280;">❌ Not Joined</span>
                     {% endif %}
 
-                </td>
+                </div>
 
                 <td class="admin-actions">
 
                     {% if user == "admin" %}
 
-                        <!-- Edit Button -->
+                        <!-- Edit Button (Admin only) -->
                         <a href="/edit_activity/{{ key }}" class="edit-btn">
                             ✏️ Edit
                         </a>
 
-                        <!-- Attendees Dropdown -->
+                        <!-- Media Gallery Button - Admin (Can Upload & Delete) -->
+                        <a href="/upload_media/{{ key }}" class="media-btn">
+                            📸 Manage Media
+                        </a>
+
+                        <!-- Attendees Dropdown (Admin only) -->
                         <div class="dropdown" style="display:inline-block;">
                             <button class="dropdown-btn" onclick="toggleDropdown('{{ key }}')">
                                 👥 Attendees ({{ attendance[key]|length }})
@@ -568,6 +603,11 @@
 
                     {% else %}
 
+                        <!-- Media Gallery Button - Regular Users (VIEW ONLY - No Upload) -->
+                        <a href="/view_media/{{ key }}" class="viewonly-btn">
+                            📸 View Media
+                        </a>
+
                         <!-- Regular User: Join/Cancel Buttons -->
                         {% if user in attendance[key] %}
 
@@ -586,8 +626,6 @@
                     {% endif %}
 
                 </div>
-
-                </td>
 
             </tr>
 
@@ -615,15 +653,23 @@
         📌 <strong>For Family Members:</strong><br>
         • Click <strong style="color:#16a34a;">Join</strong> to register for an activity<br>
         • Click <strong style="color:#dc2626;">Cancel</strong> if you cannot attend anymore<br>
+        • Click <strong style="color:#a78bfa;">View Media</strong> to see photos/videos from events<br>
         • Your name will appear in the attendees list for that activity
 
         <br><br>
 
         🔧 <strong>For Admin:</strong><br>
         • Click <strong style="color:#3b82f6;">Edit</strong> to modify any activity details<br>
+        • Click <strong style="color:#8b5cf6;">Manage Media</strong> to upload and delete photos/videos<br>
         • Click <strong>Attendees</strong> dropdown to see who joined<br>
         • Click <strong>Remove</strong> to take someone out of an activity<br>
         • Use the <strong>Admin Control Panel</strong> to manage users and activities
+
+        <br><br>
+
+        📸 <strong>Media Access:</strong><br>
+        • <strong>Admin:</strong> Can upload, manage, and delete all media<br>
+        • <strong>Family Members:</strong> Can only view media (no upload/delete)
 
     </div>
 

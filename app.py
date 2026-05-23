@@ -1,15 +1,46 @@
-from flask import Flask, render_template, request, redirect, session
+from flask import Flask, render_template, request, redirect, session, send_from_directory
 import os
 import logging
 import json
 import secrets
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
+from PIL import Image
+import datetime
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", secrets.token_hex(16))
 
-# Create data directory
-os.makedirs("data", exist_ok=True)
+# =========================
+# UPLOAD CONFIGURATION
+# =========================
+
+# Create upload folders
+UPLOAD_FOLDER = 'uploads'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+# Allowed extensions
+ALLOWED_IMAGES = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+ALLOWED_VIDEOS = {'mp4', 'webm', 'mov', 'avi', 'mkv'}
+
+# Max file size: 50MB for videos, 10MB for images
+app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
+
+def allowed_file(filename, file_type):
+    ext = filename.rsplit('.', 1)[1].lower()
+    if file_type == 'image':
+        return ext in ALLOWED_IMAGES
+    elif file_type == 'video':
+        return ext in ALLOWED_VIDEOS
+    return False
+
+def get_activity_media_folder(activity_id):
+    """Get or create media folder for an activity"""
+    folder = os.path.join(UPLOAD_FOLDER, activity_id)
+    os.makedirs(folder, exist_ok=True)
+    os.makedirs(os.path.join(folder, 'images'), exist_ok=True)
+    os.makedirs(os.path.join(folder, 'videos'), exist_ok=True)
+    return folder
 
 # =========================
 # LOAD JSON DATA
@@ -42,7 +73,8 @@ def load_data():
                 "date": "2 Dec 2024",
                 "time": "5:00 PM - 8:00 PM",
                 "location": "Main School Hall",
-                "capacity": 30
+                "capacity": 30,
+                "media": {"images": [], "videos": []}
             },
             "eid": {
                 "title": "Eid Gathering",
@@ -51,7 +83,8 @@ def load_data():
                 "date": "First Day of Eid",
                 "time": "6:00 PM - 9:00 PM",
                 "location": "Family Majlis",
-                "capacity": 40
+                "capacity": 40,
+                "media": {"images": [], "videos": []}
             },
             "flag_day": {
                 "title": "UAE Flag Day",
@@ -60,7 +93,8 @@ def load_data():
                 "date": "3 Nov 2024",
                 "time": "10:00 AM - 12:00 PM",
                 "location": "School Yard",
-                "capacity": 50
+                "capacity": 50,
+                "media": {"images": [], "videos": []}
             },
             "memorial": {
                 "title": "Commemoration Day",
@@ -69,7 +103,8 @@ def load_data():
                 "date": "30 Nov 2024",
                 "time": "9:00 AM - 11:00 AM",
                 "location": "Assembly Area",
-                "capacity": 35
+                "capacity": 35,
+                "media": {"images": [], "videos": []}
             }
         }
         save_activities_only(activities)
@@ -141,16 +176,144 @@ def log_live_attendance():
             print()
 
 # =========================
-# HOME
+# MEDIA ROUTES
+# =========================
+
+@app.route("/upload_media/<activity_id>", methods=["GET", "POST"])
+def upload_media(activity_id):
+    if "user" not in session:
+        return redirect("/login")
+    
+    if activity_id not in activities:
+        session["msg"] = "Activity not found!"
+        return redirect("/dashboard")
+    
+    # Get media list
+    media_folder = get_activity_media_folder(activity_id)
+    images = []
+    videos = []
+    
+    # Load existing media from JSON
+    if "media" not in activities[activity_id]:
+        activities[activity_id]["media"] = {"images": [], "videos": []}
+    
+    if request.method == "POST":
+        # Handle file upload
+        if 'file' not in request.files:
+            session["msg"] = "No file selected!"
+            return redirect(f"/upload_media/{activity_id}")
+        
+        file = request.files['file']
+        if file.filename == '':
+            session["msg"] = "No file selected!"
+            return redirect(f"/upload_media/{activity_id}")
+        
+        # Check file type and save
+        file_type = request.form.get('file_type', 'image')
+        
+        if file_type == 'image' and allowed_file(file.filename, 'image'):
+            filename = secure_filename(file.filename)
+            # Add timestamp to avoid duplicates
+            name, ext = filename.rsplit('.', 1)
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            new_filename = f"{name}_{timestamp}.{ext}"
+            filepath = os.path.join(media_folder, 'images', new_filename)
+            file.save(filepath)
+            
+            # Optimize image
+            try:
+                img = Image.open(filepath)
+                img.thumbnail((1200, 1200))  # Resize large images
+                img.save(filepath, optimize=True, quality=85)
+            except:
+                pass
+            
+            # Save to JSON
+            activities[activity_id]["media"]["images"].append({
+                "filename": new_filename,
+                "uploaded_by": session["user"],
+                "date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "size": os.path.getsize(filepath)
+            })
+            save_all_data(users, activities, attendance)
+            session["msg"] = "Image uploaded successfully!"
+            
+        elif file_type == 'video' and allowed_file(file.filename, 'video'):
+            filename = secure_filename(file.filename)
+            name, ext = filename.rsplit('.', 1)
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            new_filename = f"{name}_{timestamp}.{ext}"
+            filepath = os.path.join(media_folder, 'videos', new_filename)
+            file.save(filepath)
+            
+            # Save to JSON
+            activities[activity_id]["media"]["videos"].append({
+                "filename": new_filename,
+                "uploaded_by": session["user"],
+                "date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "size": os.path.getsize(filepath)
+            })
+            save_all_data(users, activities, attendance)
+            session["msg"] = "Video uploaded successfully!"
+        else:
+            session["msg"] = "File type not allowed!"
+        
+        return redirect(f"/upload_media/{activity_id}")
+    
+    # GET request - show upload page
+    images = activities[activity_id]["media"]["images"]
+    videos = activities[activity_id]["media"]["videos"]
+    
+    return render_template("upload_media.html", 
+                         activity_id=activity_id,
+                         activity=activities[activity_id],
+                         images=images,
+                         videos=videos)
+
+@app.route("/media/<activity_id>/<file_type>/<filename>")
+def serve_media(activity_id, file_type, filename):
+    """Serve uploaded images and videos"""
+    media_folder = os.path.join(UPLOAD_FOLDER, activity_id, file_type)
+    return send_from_directory(media_folder, filename)
+
+@app.route("/delete_media/<activity_id>/<media_type>/<filename>")
+def delete_media(activity_id, media_type, filename):
+    if "user" not in session or session["user"] != "admin":
+        session["msg"] = "Only admin can delete media!"
+        return redirect(f"/upload_media/{activity_id}")
+    
+    if activity_id not in activities:
+        session["msg"] = "Activity not found!"
+        return redirect("/dashboard")
+    
+    # Delete file from filesystem
+    filepath = os.path.join(UPLOAD_FOLDER, activity_id, media_type, filename)
+    if os.path.exists(filepath):
+        os.remove(filepath)
+    
+    # Remove from JSON
+    if media_type == "images":
+        activities[activity_id]["media"]["images"] = [
+            img for img in activities[activity_id]["media"]["images"] 
+            if img["filename"] != filename
+        ]
+    elif media_type == "videos":
+        activities[activity_id]["media"]["videos"] = [
+            vid for vid in activities[activity_id]["media"]["videos"] 
+            if vid["filename"] != filename
+        ]
+    
+    save_all_data(users, activities, attendance)
+    session["msg"] = "Media deleted successfully!"
+    return redirect(f"/upload_media/{activity_id}")
+
+# =========================
+# EXISTING ROUTES (Keep all your existing routes)
 # =========================
 
 @app.route("/")
 def home():
     return redirect("/login")
-
-# =========================
-# LOGIN
-# =========================
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -167,10 +330,6 @@ def login():
     
     return render_template("login.html")
 
-# =========================
-# DASHBOARD
-# =========================
-
 @app.route("/dashboard")
 def dashboard():
     if "user" not in session:
@@ -185,10 +344,6 @@ def dashboard():
         attendance=attendance,
         msg=msg
     )
-
-# =========================
-# JOIN ACTIVITY
-# =========================
 
 @app.route("/join/<activity_id>")
 def join(activity_id):
@@ -214,10 +369,6 @@ def join(activity_id):
     log_live_attendance()
     return redirect("/dashboard")
 
-# =========================
-# CANCEL ACTIVITY
-# =========================
-
 @app.route("/cancel/<activity_id>")
 def cancel(activity_id):
     if "user" not in session:
@@ -233,10 +384,6 @@ def cancel(activity_id):
     
     log_live_attendance()
     return redirect("/dashboard")
-
-# =========================
-# ADMIN REMOVE ATTENDEE
-# =========================
 
 @app.route("/admin/remove_attendee/<activity_id>/<username>")
 def admin_remove_attendee(activity_id, username):
@@ -261,18 +408,10 @@ def admin_remove_attendee(activity_id, username):
     
     return redirect("/dashboard")
 
-# =========================
-# LOGOUT
-# =========================
-
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect("/login")
-
-# =========================
-# ADD ACCOUNT
-# =========================
 
 @app.route("/add_account", methods=["GET", "POST"])
 def add_account():
@@ -304,10 +443,6 @@ def add_account():
     
     return render_template("add_account.html")
 
-# =========================
-# REMOVE ACCOUNT
-# =========================
-
 @app.route("/remove_account", methods=["GET", "POST"])
 def remove_account():
     if "user" not in session or session["user"] != "admin":
@@ -334,10 +469,6 @@ def remove_account():
     non_admin_users = [u for u in users.keys() if u != "admin"]
     return render_template("remove_account.html", users=non_admin_users)
 
-# =========================
-# ADD ACTIVITY
-# =========================
-
 @app.route("/add_activity", methods=["GET", "POST"])
 def add_activity():
     if "user" not in session or session["user"] != "admin":
@@ -357,7 +488,8 @@ def add_activity():
             "date": request.form.get("date"),
             "time": request.form.get("time"),
             "location": request.form.get("location"),
-            "capacity": int(request.form.get("capacity"))
+            "capacity": int(request.form.get("capacity")),
+            "media": {"images": [], "videos": []}
         }
         attendance[activity_id] = []
         save_all_data(users, activities, attendance)
@@ -369,10 +501,6 @@ def add_activity():
     
     return render_template("add_activity.html")
 
-# =========================
-# EDIT ACTIVITY
-# =========================
-
 @app.route("/edit_activity/<activity_id>", methods=["GET", "POST"])
 def edit_activity(activity_id):
     if "user" not in session or session["user"] != "admin":
@@ -383,7 +511,9 @@ def edit_activity(activity_id):
         return redirect("/dashboard")
     
     if request.method == "POST":
-        # Update activity with form data
+        # Preserve existing media
+        existing_media = activities[activity_id].get("media", {"images": [], "videos": []})
+        
         activities[activity_id] = {
             "title": request.form.get("title"),
             "arabic": request.form.get("arabic"),
@@ -391,19 +521,15 @@ def edit_activity(activity_id):
             "date": request.form.get("date"),
             "time": request.form.get("time"),
             "location": request.form.get("location"),
-            "capacity": int(request.form.get("capacity"))
+            "capacity": int(request.form.get("capacity")),
+            "media": existing_media
         }
         save_all_data(users, activities, attendance)
         session["msg"] = f"Activity '{request.form.get('title')}' updated!"
         logging.info(f"Admin edited activity '{activity_id}'")
         return redirect("/dashboard")
     
-    # GET request - show edit form with current data
     return render_template("edit_activity.html", activity=activities[activity_id], activity_id=activity_id)
-
-# =========================
-# DELETE ACTIVITY (from edit page)
-# =========================
 
 @app.route("/delete_activity/<activity_id>", methods=["POST"])
 def delete_activity(activity_id):
@@ -412,6 +538,13 @@ def delete_activity(activity_id):
     
     if activity_id in activities:
         activity_title = activities[activity_id]["title"]
+        
+        # Delete media folder
+        media_folder = os.path.join(UPLOAD_FOLDER, activity_id)
+        if os.path.exists(media_folder):
+            import shutil
+            shutil.rmtree(media_folder)
+        
         del activities[activity_id]
         if activity_id in attendance:
             del attendance[activity_id]
@@ -423,9 +556,28 @@ def delete_activity(activity_id):
     
     return redirect("/dashboard")
 
-# =========================
-# REMOVE ACTIVITY (original - keep for compatibility)
-# =========================
+@app.route("/view_media/<activity_id>")
+def view_media(activity_id):
+    """View-only media page for regular users"""
+    if "user" not in session:
+        return redirect("/login")
+    
+    if activity_id not in activities:
+        session["msg"] = "Activity not found!"
+        return redirect("/dashboard")
+    
+    # Get media list
+    if "media" not in activities[activity_id]:
+        activities[activity_id]["media"] = {"images": [], "videos": []}
+    
+    images = activities[activity_id]["media"]["images"]
+    videos = activities[activity_id]["media"]["videos"]
+    
+    return render_template("view_media.html", 
+                         activity_id=activity_id,
+                         activity=activities[activity_id],
+                         images=images,
+                         videos=videos)
 
 @app.route("/remove_activity", methods=["GET", "POST"])
 def remove_activity_old():

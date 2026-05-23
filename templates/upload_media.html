@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Upload Media - {{ activity.title }}</title>
+    <style>
+        body{
+            font-family:Arial;
+            background:#f4f7f5;
+            margin:0;
+            padding:20px;
+        }
+        .container{
+            max-width:1200px;
+            margin:0 auto;
+        }
+        .header{
+            background:white;
+            padding:20px 30px;
+            border-radius:15px;
+            margin-bottom:20px;
+            box-shadow:0 2px 10px rgba(0,0,0,0.08);
+        }
+        .header h1{
+            margin:0;
+            color:#009639;
+        }
+        .upload-section{
+            background:white;
+            padding:30px;
+            border-radius:15px;
+            margin-bottom:30px;
+            box-shadow:0 2px 10px rgba(0,0,0,0.08);
+        }
+        .media-gallery{
+            background:white;
+            padding:30px;
+            border-radius:15px;
+            box-shadow:0 2px 10px rgba(0,0,0,0.08);
+        }
+        .tabs{
+            display:flex;
+            gap:10px;
+            margin-bottom:20px;
+            border-bottom:2px solid #eee;
+        }
+        .tab{
+            padding:10px 20px;
+            cursor:pointer;
+            border:none;
+            background:none;
+            font-size:16px;
+        }
+        .tab.active{
+            color:#009639;
+            border-bottom:2px solid #009639;
+        }
+        .tab-content{
+            display:none;
+        }
+        .tab-content.active{
+            display:block;
+        }
+        .upload-area{
+            border:2px dashed #ccc;
+            padding:40px;
+            text-align:center;
+            border-radius:15px;
+            cursor:pointer;
+            margin-bottom:20px;
+        }
+        .upload-area:hover{
+            border-color:#009639;
+            background:#f0fdf4;
+        }
+        .file-input{
+            display:none;
+        }
+        .media-grid{
+            display:grid;
+            grid-template-columns:repeat(auto-fill,minmax(250px,1fr));
+            gap:20px;
+            margin-top:20px;
+        }
+        .media-item{
+            background:#f9f9f9;
+            border-radius:10px;
+            overflow:hidden;
+            box-shadow:0 2px 5px rgba(0,0,0,0.1);
+        }
+        .media-item img{
+            width:100%;
+            height:200px;
+            object-fit:cover;
+        }
+        .media-item video{
+            width:100%;
+            height:200px;
+            object-fit:cover;
+        }
+        .media-info{
+            padding:10px;
+            font-size:12px;
+            background:white;
+        }
+        .delete-btn{
+            background:#dc2626;
+            color:white;
+            border:none;
+            padding:5px 10px;
+            border-radius:5px;
+            cursor:pointer;
+            margin-top:5px;
+            width:100%;
+        }
+        .back-btn{
+            background:#009639;
+            color:white;
+            padding:10px 20px;
+            text-decoration:none;
+            border-radius:8px;
+            display:inline-block;
+            margin-bottom:20px;
+        }
+        .msg{
+            background:#dcfce7;
+            color:#166534;
+            padding:15px;
+            border-radius:10px;
+            margin-bottom:20px;
+        }
+        button{
+            background:#009639;
+            color:white;
+            border:none;
+            padding:10px 20px;
+            border-radius:8px;
+            cursor:pointer;
+        }
+        .file-info{
+            margin-top:10px;
+            font-size:12px;
+            color:#666;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <a href="/dashboard" class="back-btn">← Back to Dashboard</a>
+    
+    <div class="header">
+        <h1>📸 {{ activity.title }} - Media Gallery</h1>
+        <p>Upload and share photos and videos from this event</p>
+    </div>
+    
+    {% if msg %}
+    <div class="msg">
+        {{ msg }}
+    </div>
+    {% endif %}
+    
+    <div class="upload-section">
+        <h2>Upload New Media</h2>
+        
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('image')">📷 Upload Photo</button>
+            <button class="tab" onclick="showTab('video')">🎬 Upload Video</button>
+        </div>
+        
+        <!-- Image Upload Tab -->
+        <div id="image-tab" class="tab-content active">
+            <form action="/upload_media/{{ activity_id }}" method="POST" enctype="multipart/form-data" id="imageForm">
+                <input type="hidden" name="file_type" value="image">
+                <div class="upload-area" onclick="document.getElementById('imageInput').click()">
+                    📸 Click here to select photos<br>
+                    <small>Supports: JPG, PNG, GIF, WEBP (Max 10MB each)</small>
+                </div>
+                <input type="file" id="imageInput" name="file" class="file-input" accept="image/*" multiple onchange="submitImage()">
+                <div id="imagePreview" class="file-info"></div>
+            </form>
+        </div>
+        
+        <!-- Video Upload Tab -->
+        <div id="video-tab" class="tab-content">
+            <form action="/upload_media/{{ activity_id }}" method="POST" enctype="multipart/form-data" id="videoForm">
+                <input type="hidden" name="file_type" value="video">
+                <div class="upload-area" onclick="document.getElementById('videoInput').click()">
+                    🎬 Click here to select videos<br>
+                    <small>Supports: MP4, WebM, MOV, AVI (Max 50MB each)</small>
+                </div>
+                <input type="file" id="videoInput" name="file" class="file-input" accept="video/*" onchange="submitVideo()">
+                <div id="videoPreview" class="file-info"></div>
+            </form>
+        </div>
+    </div>
+    
+    <div class="media-gallery">
+        <h2>📷 Photos ({{ images|length }})</h2>
+        {% if images %}
+        <div class="media-grid">
+            {% for image in images %}
+            <div class="media-item">
+                <img src="/media/{{ activity_id }}/images/{{ image.filename }}" alt="Event photo">
+                <div class="media-info">
+                    <strong>Uploaded by:</strong> {{ image.uploaded_by }}<br>
+                    <strong>Date:</strong> {{ image.date }}<br>
+                    {% if session.user == "admin" %}
+                    <button class="delete-btn" onclick="deleteMedia('{{ activity_id }}', 'images', '{{ image.filename }}')">🗑️ Delete</button>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p>No photos yet. Be the first to upload!</p>
+        {% endif %}
+    </div>
+    
+    <div class="media-gallery" style="margin-top:30px;">
+        <h2>🎬 Videos ({{ videos|length }})</h2>
+        {% if videos %}
+        <div class="media-grid">
+            {% for video in videos %}
+            <div class="media-item">
+                <video controls>
+                    <source src="/media/{{ activity_id }}/videos/{{ video.filename }}" type="video/mp4">
+                    Your browser doesn't support video playback.
+                </video>
+                <div class="media-info">
+                    <strong>Uploaded by:</strong> {{ video.uploaded_by }}<br>
+                    <strong>Date:</strong> {{ video.date }}<br>
+                    {% if session.user == "admin" %}
+                    <button class="delete-btn" onclick="deleteMedia('{{ activity_id }}', 'videos', '{{ video.filename }}')">🗑️ Delete</button>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p>No videos yet. Be the first to upload!</p>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    function showTab(type) {
+        // Hide all tabs
+        document.getElementById('image-tab').classList.remove('active');
+        document.getElementById('video-tab').classList.remove('active');
+        
+        // Remove active class from all tab buttons
+        const tabs = document.querySelectorAll('.tab');
+        tabs.forEach(tab => tab.classList.remove('active'));
+        
+        // Show selected tab
+        if (type === 'image') {
+            document.getElementById('image-tab').classList.add('active');
+            tabs[0].classList.add('active');
+        } else {
+            document.getElementById('video-tab').classList.add('active');
+            tabs[1].classList.add('active');
+        }
+    }
+    
+    function submitImage() {
+        const input = document.getElementById('imageInput');
+        if (input.files.length > 0) {
+            const preview = document.getElementById('imagePreview');
+            preview.innerHTML = `<strong>Uploading ${input.files.length} file(s)...</strong>`;
+            document.getElementById('imageForm').submit();
+        }
+    }
+    
+    function submitVideo() {
+        const input = document.getElementById('videoInput');
+        if (input.files.length > 0) {
+            const preview = document.getElementById('videoPreview');
+            preview.innerHTML = `<strong>Uploading ${input.files[0].name}...</strong>`;
+            document.getElementById('videoForm').submit();
+        }
+    }
+    
+    function deleteMedia(activityId, type, filename) {
+        if (confirm('Are you sure you want to delete this media?')) {
+            window.location.href = `/delete_media/${activityId}/${type}/${filename}`;
+        }
+    }
+</script>
+</body>
+</html>
