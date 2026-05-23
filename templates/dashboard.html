@@ -262,7 +262,22 @@
         }
 
         .admin-actions {
-            min-width: 120px;
+            min-width: 160px;
+        }
+
+        .edit-btn {
+            background:#3b82f6;
+            color:white;
+            padding:8px 12px;
+            border-radius:8px;
+            text-decoration:none;
+            display:inline-block;
+            margin-right:8px;
+            font-size:14px;
+        }
+
+        .edit-btn:hover {
+            background:#2563eb;
         }
     </style>
 
@@ -523,8 +538,13 @@
 
                     {% if user == "admin" %}
 
-                        <!-- Admin: Show Attendees Dropdown -->
-                        <div class="dropdown">
+                        <!-- Edit Button -->
+                        <a href="/edit_activity/{{ key }}" class="edit-btn">
+                            ✏️ Edit
+                        </a>
+
+                        <!-- Attendees Dropdown -->
+                        <div class="dropdown" style="display:inline-block;">
                             <button class="dropdown-btn" onclick="toggleDropdown('{{ key }}')">
                                 👥 Attendees ({{ attendance[key]|length }})
                             </button>
@@ -565,6 +585,8 @@
 
                     {% endif %}
 
+                </div>
+
                 </td>
 
             </tr>
@@ -598,6 +620,7 @@
         <br><br>
 
         🔧 <strong>For Admin:</strong><br>
+        • Click <strong style="color:#3b82f6;">Edit</strong> to modify any activity details<br>
         • Click <strong>Attendees</strong> dropdown to see who joined<br>
         • Click <strong>Remove</strong> to take someone out of an activity<br>
         • Use the <strong>Admin Control Panel</strong> to manage users and activities

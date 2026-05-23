@@ -1,14 +1,9 @@
-from flask import Flask, render_template, request, redirect, session, send_file
+from flask import Flask, render_template, request, redirect, session
 import os
 import logging
 import json
 import secrets
 from werkzeug.security import generate_password_hash, check_password_hash
-import requests
-import base64
-import io
-import zipfile
-from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", secrets.token_hex(16))
@@ -17,116 +12,10 @@ app.secret_key = os.environ.get("SECRET_KEY", secrets.token_hex(16))
 os.makedirs("data", exist_ok=True)
 
 # =========================
-# GITHUB BACKUP CONFIGURATION
-# =========================
-# Add these to your Render environment variables:
-GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
-REPO_NAME = os.environ.get("REPO_NAME", "")  # Format: "username/repo-name"
-BRANCH = os.environ.get("BRANCH", "main")
-
-def backup_to_github():
-    """Save all JSON files to GitHub repository"""
-    if not GITHUB_TOKEN or not REPO_NAME:
-        print("⚠️ GitHub backup not configured - skipping")
-        return False
-    
-    try:
-        headers = {
-            "Authorization": f"token {GITHUB_TOKEN}",
-            "Accept": "application/vnd.github.v3+json"
-        }
-        
-        for filename in ["users.json", "activities.json", "attendance.json"]:
-            file_path = f"data/{filename}"
-            
-            if not os.path.exists(file_path):
-                print(f"⚠️ {filename} not found, skipping")
-                continue
-            
-            with open(file_path, "r") as f:
-                content = f.read()
-            
-            # Encode content to base64
-            encoded_content = base64.b64encode(content.encode()).decode()
-            
-            # Get current file SHA (if exists)
-            url = f"https://api.github.com/repos/{REPO_NAME}/contents/data/{filename}"
-            response = requests.get(url, headers=headers)
-            
-            data = {
-                "message": f"Auto-backup {filename} - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-                "content": encoded_content,
-                "branch": BRANCH
-            }
-            
-            if response.status_code == 200:
-                # File exists, get SHA for update
-                data["sha"] = response.json()["sha"]
-                print(f"🔄 Updating {filename} on GitHub...")
-            else:
-                print(f"📤 Creating {filename} on GitHub...")
-            
-            # Push to GitHub
-            put_response = requests.put(url, headers=headers, json=data)
-            
-            if put_response.status_code in [200, 201]:
-                print(f"✅ {filename} backed up to GitHub")
-            else:
-                print(f"❌ Failed to backup {filename}: {put_response.status_code}")
-        
-        return True
-        
-    except Exception as e:
-        print(f"❌ GitHub backup error: {e}")
-        return False
-
-def restore_from_github():
-    """Restore JSON files from GitHub on startup"""
-    if not GITHUB_TOKEN or not REPO_NAME:
-        print("⚠️ GitHub restore not configured - using local files")
-        return False
-    
-    try:
-        headers = {"Authorization": f"token {GITHUB_TOKEN}"}
-        restored_any = False
-        
-        for filename in ["users.json", "activities.json", "attendance.json"]:
-            url = f"https://api.github.com/repos/{REPO_NAME}/contents/data/{filename}"
-            response = requests.get(url, headers=headers)
-            
-            if response.status_code == 200:
-                content = response.json()["content"]
-                decoded = base64.b64decode(content).decode()
-                
-                with open(f"data/{filename}", "w") as f:
-                    f.write(decoded)
-                
-                print(f"✅ Restored {filename} from GitHub")
-                restored_any = True
-            else:
-                print(f"⚠️ No backup found for {filename} on GitHub")
-        
-        return restored_any
-        
-    except Exception as e:
-        print(f"❌ GitHub restore error: {e}")
-        return False
-
-# =========================
-# LOAD JSON DATA WITH AUTO-RESTORE
+# LOAD JSON DATA
 # =========================
 
 def load_data():
-    """Load data from JSON files or GitHub backup"""
-    
-    # Check if local files exist
-    local_files_exist = all(os.path.exists(f"data/{f}") for f in ["users.json", "activities.json", "attendance.json"])
-    
-    if not local_files_exist:
-        print("📥 Local files missing, attempting restore from GitHub...")
-        if restore_from_github():
-            local_files_exist = True
-    
     # Load users
     try:
         with open("data/users.json", "r") as f:
@@ -213,13 +102,9 @@ def save_attendance_only(attendance):
         json.dump(attendance, f, indent=4)
 
 def save_all_data(users, activities, attendance):
-    """Save all data and backup to GitHub"""
     save_users_only(users)
     save_activities_only(activities)
     save_attendance_only(attendance)
-    
-    # Auto-backup to GitHub
-    backup_to_github()
 
 # Load initial data
 users, activities, attendance = load_data()
@@ -355,8 +240,6 @@ def cancel(activity_id):
 
 @app.route("/admin/remove_attendee/<activity_id>/<username>")
 def admin_remove_attendee(activity_id, username):
-    """Admin can remove any attendee from an activity"""
-    
     if "user" not in session:
         return redirect("/login")
     
@@ -487,11 +370,65 @@ def add_activity():
     return render_template("add_activity.html")
 
 # =========================
-# REMOVE ACTIVITY
+# EDIT ACTIVITY
+# =========================
+
+@app.route("/edit_activity/<activity_id>", methods=["GET", "POST"])
+def edit_activity(activity_id):
+    if "user" not in session or session["user"] != "admin":
+        return redirect("/dashboard")
+    
+    if activity_id not in activities:
+        session["msg"] = "Activity not found!"
+        return redirect("/dashboard")
+    
+    if request.method == "POST":
+        # Update activity with form data
+        activities[activity_id] = {
+            "title": request.form.get("title"),
+            "arabic": request.form.get("arabic"),
+            "description": request.form.get("description"),
+            "date": request.form.get("date"),
+            "time": request.form.get("time"),
+            "location": request.form.get("location"),
+            "capacity": int(request.form.get("capacity"))
+        }
+        save_all_data(users, activities, attendance)
+        session["msg"] = f"Activity '{request.form.get('title')}' updated!"
+        logging.info(f"Admin edited activity '{activity_id}'")
+        return redirect("/dashboard")
+    
+    # GET request - show edit form with current data
+    return render_template("edit_activity.html", activity=activities[activity_id], activity_id=activity_id)
+
+# =========================
+# DELETE ACTIVITY (from edit page)
+# =========================
+
+@app.route("/delete_activity/<activity_id>", methods=["POST"])
+def delete_activity(activity_id):
+    if "user" not in session or session["user"] != "admin":
+        return redirect("/dashboard")
+    
+    if activity_id in activities:
+        activity_title = activities[activity_id]["title"]
+        del activities[activity_id]
+        if activity_id in attendance:
+            del attendance[activity_id]
+        save_all_data(users, activities, attendance)
+        session["msg"] = f"Activity '{activity_title}' deleted!"
+        logging.info(f"Admin deleted activity '{activity_id}'")
+    else:
+        session["msg"] = "Activity not found!"
+    
+    return redirect("/dashboard")
+
+# =========================
+# REMOVE ACTIVITY (original - keep for compatibility)
 # =========================
 
 @app.route("/remove_activity", methods=["GET", "POST"])
-def remove_activity():
+def remove_activity_old():
     if "user" not in session or session["user"] != "admin":
         return redirect("/dashboard")
     
@@ -512,74 +449,6 @@ def remove_activity():
         return redirect("/dashboard")
     
     return render_template("remove_activity.html", activities=activities)
-
-# =========================
-# BACKUP & RESTORE ROUTES
-# =========================
-
-@app.route("/admin/backup")
-def admin_backup():
-    """Manually backup to GitHub"""
-    if session.get("user") != "admin":
-        return "Unauthorized", 401
-    
-    if backup_to_github():
-        session["msg"] = "✅ Manual backup to GitHub completed!"
-    else:
-        session["msg"] = "❌ Backup failed! Check GitHub configuration."
-    
-    return redirect("/dashboard")
-
-@app.route("/admin/restore")
-def admin_restore():
-    """Manually restore from GitHub"""
-    if session.get("user") != "admin":
-        return "Unauthorized", 401
-    
-    if restore_from_github():
-        global users, activities, attendance
-        users, activities, attendance = load_data()
-        session["msg"] = "✅ Data restored from GitHub successfully!"
-    else:
-        session["msg"] = "❌ Restore failed! Check GitHub configuration."
-    
-    return redirect("/dashboard")
-
-@app.route("/admin/download")
-def admin_download():
-    """Download all data as zip file"""
-    if session.get("user") != "admin":
-        return "Unauthorized", 401
-    
-    memory_file = io.BytesIO()
-    with zipfile.ZipFile(memory_file, 'w') as zf:
-        for file in ["users.json", "activities.json", "attendance.json"]:
-            file_path = f"data/{file}"
-            if os.path.exists(file_path):
-                zf.write(file_path, file)
-    
-    memory_file.seek(0)
-    return send_file(
-        memory_file,
-        download_name=f"attendance_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip",
-        as_attachment=True
-    )
-
-@app.route("/admin/status")
-def admin_status():
-    """Check backup status"""
-    if session.get("user") != "admin":
-        return "Unauthorized", 401
-    
-    status = {
-        "github_configured": bool(GITHUB_TOKEN and REPO_NAME),
-        "files_exist": {
-            "users.json": os.path.exists("data/users.json"),
-            "activities.json": os.path.exists("data/activities.json"),
-            "attendance.json": os.path.exists("data/attendance.json")
-        }
-    }
-    return status
 
 # =========================
 # RUN
